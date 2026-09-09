@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# ESO writes these next to an installed add-on; they are per-player, not source.
+SavedVariables/
+*.lua.bak
