@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.3.1")
+check("version read from manifest", addon.version, "2.4.0")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.3.1"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.4.0"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -855,7 +855,80 @@ Advance(10)
 check("unspawned, and another campaign's, are both left out", BoardSaid("Volendrung"), false)
 SetObjectives({})
 
-print("\n== 31. the Imperial City is a different campaign ==")
+print("\n== 31. the artifact's clock ==")
+-- Nothing in the API says when the artifact comes or goes. The add-on times the three
+-- announcements itself and adds the community's figures -- revealed 10-15 minutes after it
+-- spawns, gone about 30 minutes after that -- as a forecast marked "about".
+local UNKNOWN, HELD = OBJECTIVE_CONTROL_STATE_UNKNOWN, OBJECTIVE_CONTROL_STATE_FLAG_HELD
+ResetWorld()
+Slash("board on")
+SetObjectives({})
+addon.artifactClock = nil
+Advance(10)
+check("no clock, no line", BoardSaid("Volendrung"), false)
+
+EmitArtifactSpawned()
+check("seeking a wielder the moment it spawns", BoardSaid("Volendrung: seeking a wielder"), true)
+check("with its elapsed time and the reveal window", BoardSaid("(0:00 ago / revealed in about 10-15 min)"), true)
+Advance(360)
+check("which counts down", BoardSaid("(6:00 ago / revealed in about 4-9 min)"), true)
+Advance(600)
+check("and says any moment once the window has passed", BoardSaid("revealed in about any moment"), true)
+
+-- Revealed: the objective now exists, and the clock restarts on the reveal.
+EmitArtifactState(UNKNOWN, HELD)
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = HELD, pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_ALDMERI },
+})
+Advance(10)
+check("the seeking line gives way to the holder", BoardSaid("seeking"), false)
+check("timed from the reveal", BoardSaid("Volendrung: Aldmeri Dominion (revealed 0:10 ago / gone in about 30 min)"), true)
+Advance(1320)
+check("the stay counts down", BoardSaid("(revealed 22:10 ago / gone in about 8 min)"), true)
+Advance(600)
+check("and runs out to any moment, not a negative", BoardSaid("gone in about any moment"), true)
+
+-- Carried by us: the carrier's hunger meter is the one lifetime number the client gives.
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = HELD, mine = true, pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_EBONHEART },
+})
+Advance(10)
+check("carrying it shows what is left of the meter", BoardSaid("you are carrying it (energy 62%)"), true)
+
+-- Gone: timed from the moment it left, with hours once there are hours.
+EmitArtifactState(HELD, UNKNOWN)
+SetObjectives({})
+Advance(10)
+check("returned to Oblivion", BoardSaid("Volendrung: returned to Oblivion (0:10 ago)"), true)
+Advance(3600)
+check("hours when there are hours", BoardSaid("(1:00:10 ago)"), true)
+
+-- The clock only knows what it saw. Out already when we arrived: time unknown, not a guess.
+addon.artifactClock = nil
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = HELD, pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_DAGGERFALL },
+})
+Advance(10)
+check("an artifact that was out before we came is untimed", BoardSaid("Volendrung: Daggerfall Covenant (time unknown)"), true)
+
+-- Another campaign's announcement does not start this campaign's clock.
+addon.artifactClock = nil
+SetObjectives({})
+EmitArtifactState(UNKNOWN, HELD, BGQUERY_ASSIGNED_CAMPAIGN)
+check("the home campaign's reveal is ignored", addon.artifactClock, nil)
+-- And a clock started in a different campaign is not read in this one.
+EmitArtifactSpawned()
+SetCampaign({ id = 8 })
+Advance(10)
+check("a clock from another campaign is not shown", BoardSaid("seeking"), false)
+SetCampaign({ id = 7 })
+addon.artifactClock = nil
+SetObjectives({})
+
+print("\n== 32. the Imperial City is a different campaign ==")
 ResetWorld()
 Slash("board on")
 SetSelectionData({
@@ -886,7 +959,7 @@ Advance(10)
 check("and Cyrodiil gets them back", BoardSaid("keeps 8"), true)
 SetSelectionData({})
 
-print("\n== 32. nothing runs outside Cyrodiil ==")
+print("\n== 33. nothing runs outside Cyrodiil ==")
 ResetWorld()
 check("the timer runs in an AvA zone", TimerRunning(), true)
 
@@ -931,7 +1004,7 @@ check("a direct pass outside reads no keeps at all", total, 0)
 check("and watches none", watched, 0)
 SetInAvA(true)
 
-print("\n== 33. the output window ==")
+print("\n== 34. the output window ==")
 ResetWorld()
 addon.log:Clear()
 check("its own window by default", addon.sv.log.destination, "window")
@@ -983,7 +1056,7 @@ ClearOutput()
 Slash("log sideways")
 check("a destination that is not one is refused", Said("say window, chat or both"), true)
 
-print("\n== 34. the output window is placed and sized ==")
+print("\n== 35. the output window is placed and sized ==")
 ResetWorld()
 addon.log:Clear()
 addon.log:Push("something")
@@ -1051,7 +1124,7 @@ check("and the status says why", Said("could not be created"), true)
 WindowManagerBroken = false
 addon.log.failed = false
 
-print("\n== 35. the window belongs to Cyrodiil ==")
+print("\n== 36. the window belongs to Cyrodiil ==")
 ResetWorld()
 addon.log:Clear()
 Slash("log window")
@@ -1095,7 +1168,7 @@ Slash("ava on")
 SetInAvA(true)
 Fire(EVENT_PLAYER_ACTIVATED)
 
-print("\n== 36. every row on the panel can be read ==")
+print("\n== 37. every row on the panel can be read ==")
 -- LibHarvensAddonSettings calls getFunction on every row when it builds and when it updates.
 -- One row that answers with nil -- or throws -- takes the whole settings panel down with it,
 -- which is exactly what a slider did on a live console: its reader's name was derived from the
@@ -1128,7 +1201,7 @@ for _, row in ipairs(PanelRows) do
 end
 check("and every slider reads back what it was set to", table.concat(roundTrips, ", "), "")
 
-print("\n== 37. the panel ==")
+print("\n== 38. the panel ==")
 -- A heading with nothing under it draws as an empty collapsible row. Every heading has to be
 -- followed by something that is not another heading, and the panel must not end on one.
 local emptySections = {}
@@ -1142,7 +1215,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.3.1")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.4.0")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)
@@ -1156,7 +1229,7 @@ check("and the panel agrees", PanelRow("Towns").getFunction(), false)
 PanelRow("Towns").setFunction(true)
 check("and the panel can set it back", addon:GroupEnabled("towns"), true)
 
-print("\n== 38. the two languages line up ==")
+print("\n== 39. the two languages line up ==")
 local english = CollectStringKeys(ADDON_DIR .. "/lang/strings.lua")
 local japanese = CollectStringKeys(ADDON_DIR .. "/lang/jp.lua")
 local missing, extra = {}, {}

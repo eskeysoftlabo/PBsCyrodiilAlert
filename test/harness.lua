@@ -98,6 +98,25 @@ end
 function IsInGamepadPreferredMode() return false end
 
 EVENT_ARTIFACT_CONTROL_STATE = "EVENT_ARTIFACT_CONTROL_STATE"
+
+-- The Daedric artifact's announcements, and the one lifetime number the client hands over: the
+-- carrier's hunger meter, readable only by the carrier.
+EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_SPAWNED_BUT_NOT_REVEALED = "EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_SPAWNED_BUT_NOT_REVEALED"
+EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_STATE_CHANGED = "EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_STATE_CHANGED"
+COMBAT_MECHANIC_FLAGS_DAEDRIC = 64
+ArtifactEnergy = { 62, 100 }
+function GetDaedricArtifactDisplayName(id) return id == 1 and "Volendrung" or "" end
+function GetUnitPower(unitTag, mechanic)
+	if unitTag == "player" and mechanic == COMBAT_MECHANIC_FLAGS_DAEDRIC then
+		return ArtifactEnergy[1], ArtifactEnergy[2]
+	end
+	return 0, 0
+end
+function EmitArtifactSpawned() Fire(EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_SPAWNED_BUT_NOT_REVEALED, 1) end
+function EmitArtifactState(lastState, state, bg)
+	Fire(EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_STATE_CHANGED, 900, 1, bg or BGQUERY_LOCAL, 0, state,
+		ALLIANCE_NONE, ALLIANCE_NONE, 0, 1, lastState)
+end
 -- What the client sends when a scroll changes hands.
 function EmitScroll(controlEvent, artifactName, keepId, characterName, alliance, displayName)
 	Fire(EVENT_ARTIFACT_CONTROL_STATE, artifactName, keepId, characterName, alliance, controlEvent,
@@ -434,7 +453,7 @@ end
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.3.1" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.4.0" end,
 	}
 end
 
