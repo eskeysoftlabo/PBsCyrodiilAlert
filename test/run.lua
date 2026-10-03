@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.6.2")
+check("version read from manifest", addon.version, "2.6.3")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 91)
+check("panel rows built", #PanelRows, 93)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.2"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.3"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1259,6 +1259,19 @@ check("the player is on it", addon.map.player.hidden, false)
 check("where they stand", near(addon.map.player.anchors[1].x), 120)
 check("both ways", near(addon.map.player.anchors[1].y), 180)
 check("facing where the camera faces", addon.map.player.rotation, 1.25)
+-- Smaller than a keep, and on its own size.
+check("the arrow is smaller than a keep", addon.map.player.width < chalman.icon.width, true)
+check("at its own default size", addon.map.player.width, 10)
+PanelRow("Your arrow's size").setFunction(6)
+check("and resizes on its own", addon.map.player.width, 6)
+check("without touching the keeps", chalman.icon.width, 18)
+PanelRow("Your arrow's size").setFunction(10)
+Slash("map player off")
+Advance(1)
+check("and can be switched off", addon.map.player.hidden, true)
+Slash("map player on")
+Advance(4)
+check("and on again", addon.map.player.hidden, false)
 
 -- The world map showing a city instead. Every pin function now answers in the city's
 -- coordinates; converted, they must land exactly where they did.
@@ -1586,7 +1599,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.2")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.3")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

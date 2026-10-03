@@ -250,6 +250,7 @@ in a corner.
 　/pbalert map on | off             全体マップ
 　/pbalert map links on | off       全体マップのトランシタス経路
 　/pbalert map resources on | off   全体マップの資源
+　/pbalert map player on | off      全体マップの自分の位置
 　/pbalert map probe                全体マップが使っている値を表示
 　/pbalert board                    戦況をチャット欄に表示
 　/pbalert board on | off           戦況を画面に表示
@@ -477,6 +478,7 @@ Chat commands:
   /pbalert map on | off             the overview map
   /pbalert map links on | off       the transitus network on the map
   /pbalert map resources on | off   the resources on the map
+  /pbalert map player on | off      your own arrow on the map
   /pbalert map probe                what the map is working with
   /pbalert board                    print the campaign summary in chat
   /pbalert board on | off           keep it on screen

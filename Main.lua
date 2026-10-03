@@ -499,6 +499,9 @@ local DEFAULTS = {
 		links = true,
 		-- The farms, mines and lumbermills around each keep.
 		resources = true,
+		-- Your own arrow, and how big it is. Smaller than a keep, as on the world map.
+		player = true,
+		playerSize = 10,
 	},
 	-- The campaign summary. Its own switch, its own size and its own corner; the typeface and
 	-- outline come from the alert display, because two on-screen texts from one add-on in two
@@ -560,6 +563,7 @@ end
 
 addon:UpdateScreenLimits()
 addon.MIN_MAP_PIN, addon.MAX_MAP_PIN = 8, 48
+addon.MIN_MAP_PLAYER, addon.MAX_MAP_PLAYER = 4, 40
 addon.MIN_INTERVAL, addon.MAX_INTERVAL = MIN_INTERVAL, MAX_INTERVAL
 addon.MIN_REPEAT, addon.MAX_REPEAT = MIN_REPEAT, MAX_REPEAT
 
@@ -2105,6 +2109,7 @@ function addon:PrintHelp()
 	Line(GetString(SI_PBSCA_HELP_MAP))
 	Line(GetString(SI_PBSCA_HELP_MAP_LINKS))
 	Line(GetString(SI_PBSCA_HELP_MAP_RESOURCES))
+	Line(GetString(SI_PBSCA_HELP_MAP_PLAYER))
 	Line(GetString(SI_PBSCA_HELP_MAP_PROBE))
 	Line(GetString(SI_PBSCA_HELP_BOARD))
 	Line(GetString(SI_PBSCA_HELP_BOARD_DRAW))
@@ -2259,6 +2264,20 @@ function addon:HandleCommand(argumentString)
 			end
 			return
 		end
+		-- "map player on|off" -- your own arrow.
+		if second == "player" or second == "me" then
+			local value = ParseSwitch(words[3] or "")
+			if value == nil then
+				Print(GetString(SI_PBSCA_ERROR_ON_OR_OFF))
+				return
+			end
+			self.sv.map.player = value
+			self.map:Refresh()
+			self:RefreshPanel()
+			Print(GetString(SI_PBSCA_MAP_PLAYER) .. ": " .. OnOff(value))
+			return
+		end
+
 		-- "map resources on|off" -- the farms, mines and lumbermills.
 		if second == "resources" or second == "resource" then
 			local value = ParseSwitch(words[3] or "")

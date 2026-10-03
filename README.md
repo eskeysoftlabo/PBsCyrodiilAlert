@@ -223,7 +223,8 @@ An overview map, on its own switch, sized and placed like everything else:
 - the transitus network, drawn as the world map draws it away from a shrine — each link in its
   owner's colour, faint when nobody holds it, dashed while fighting has cut it (`/pbalert map
   links off` to hide it);
-- you, as the world map's arrow, turned the way the camera faces.
+- you, as the world map's arrow, turned the way the camera faces — on its own switch and its own
+  size, smaller than a keep as on the world map (`/pbalert map player off`).
 
 The farm, mine and lumbermill around each keep are drawn too, on their own switch (`/pbalert
 map resources off`): at the world map's own proportion to a keep (27 against 53), and *under* the
@@ -510,4 +511,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 457 checks.
+colours and every way it degrades are checked too. 463 checks.

@@ -127,6 +127,13 @@ function map:PinSize()
 	return Clamp(Settings().pinSize, addon.MIN_MAP_PIN, addon.MAX_MAP_PIN) or addon.DEFAULTS.map.pinSize
 end
 
+-- The player's arrow has its own size. It used to be drawn at the pin size, as big as a keep,
+-- which is far bigger than the world map has it (PLAYER_PIN_SIZE 16 against KEEP_PIN_SIZE 53,
+-- mappin.lua) and covered the keep you were standing at.
+function map:PlayerSize()
+	return Clamp(Settings().playerSize, addon.MIN_MAP_PLAYER, addon.MAX_MAP_PLAYER) or addon.DEFAULTS.map.playerSize
+end
+
 function map:Opacity()
 	return Clamp(Settings().opacity, 10, 100) or addon.DEFAULTS.map.opacity
 end
@@ -404,7 +411,8 @@ function map:Apply()
 	end
 
 	local pin = self:PinSize()
-	self.player:SetDimensions(pin, pin)
+	local playerSize = self:PlayerSize()
+	self.player:SetDimensions(playerSize, playerSize)
 	for _, keep in pairs(self.keepPins) do
 		keep.icon:SetDimensions(pin * keep.scale, pin * keep.scale)
 		keep.burst:SetDimensions(pin * keep.scale * 1.6, pin * keep.scale * 1.6)
@@ -652,7 +660,8 @@ function map:RefreshPlayer()
 	if not (self.player and GetMapPlayerPosition) then
 		return
 	end
-	if not self:MapReadsAllowed() then
+	-- Switched off: hidden, and nothing asked of the client to place it.
+	if Settings().player == false or not self:MapReadsAllowed() then
 		self.player:SetHidden(true)
 		return
 	end
