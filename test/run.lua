@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.5.0")
+check("version read from manifest", addon.version, "2.5.1")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.0"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.1"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1299,7 +1299,49 @@ Slash("map off")
 check("off is off", window.hidden, true)
 check("and nothing ticking", UpdateRunning("PBsCyrodiilAlertMapTick"), false)
 
-print("\n== 38. every row on the panel can be read ==")
+print("\n== 38. every surface can reach the whole screen ==")
+-- The movement range used to be a fixed 900 by 500, which left most of a wide screen out of
+-- reach from any one anchor. It is the screen's own size now, in both directions.
+check("the range is the screen's width", addon.MAX_OFFSET_X, 2560)
+check("and its height", addon.MAX_OFFSET_Y, 1440)
+local short = {}
+for _, row in ipairs(PanelRows) do
+	if row.type == LibHarvensAddonSettings.ST_SLIDER and row.label and row.label:find("sideways", 1, true) then
+		if row.min ~= -2560 or row.max ~= 2560 then short[#short + 1] = row.label end
+	elseif row.type == LibHarvensAddonSettings.ST_SLIDER and row.label and row.label:find("up or down", 1, true) then
+		if row.min ~= -1440 or row.max ~= 1440 then short[#short + 1] = row.label end
+	end
+end
+check("every position slider spans the whole screen", table.concat(short, ", "), "")
+local counted = 0
+for _, row in ipairs(PanelRows) do
+	if row.label and (row.label:find("sideways", 1, true) or row.label:find("up or down", 1, true)) then
+		counted = counted + 1
+	end
+end
+check("all eight of them, two per surface", counted, 8)
+
+-- And the value is honoured, not cut back to the old limit: top right, then most of the way to
+-- the left edge.
+ResetWorld()
+addon.log:Clear()
+addon.log:Push("far left")
+PanelRow("Window position").setFunction(nil, nil, { data = "TOPRIGHT" })
+PanelRow("Move the window sideways").setFunction(-2300)
+PanelRow("Move the window up or down").setFunction(1200)
+check("2300 left of the right edge is where it goes", LogWindow().anchors[1].x, -2300)
+check("and 1200 down", LogWindow().anchors[1].y, 1200)
+
+-- A client that will not say how big the screen is gets the usual size, not nothing.
+local realDimensions = GuiRoot.GetDimensions
+GuiRoot.GetDimensions = nil
+local fallbackWidth, fallbackHeight = addon:ScreenSize()
+check("no screen size falls back to 1920 wide", fallbackWidth, 1920)
+check("by 1080", fallbackHeight, 1080)
+GuiRoot.GetDimensions = realDimensions
+Slash("reset")
+
+print("\n== 39. every row on the panel can be read ==")
 -- LibHarvensAddonSettings calls getFunction on every row when it builds and when it updates.
 -- One row that answers with nil -- or throws -- takes the whole settings panel down with it,
 -- which is exactly what a slider did on a live console: its reader's name was derived from the
@@ -1332,7 +1374,7 @@ for _, row in ipairs(PanelRows) do
 end
 check("and every slider reads back what it was set to", table.concat(roundTrips, ", "), "")
 
-print("\n== 39. the panel ==")
+print("\n== 40. the panel ==")
 -- A heading with nothing under it draws as an empty collapsible row. Every heading has to be
 -- followed by something that is not another heading, and the panel must not end on one.
 local emptySections = {}
@@ -1346,7 +1388,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.0")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.1")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)
@@ -1360,7 +1402,7 @@ check("and the panel agrees", PanelRow("Towns").getFunction(), false)
 PanelRow("Towns").setFunction(true)
 check("and the panel can set it back", addon:GroupEnabled("towns"), true)
 
-print("\n== 40. the two languages line up ==")
+print("\n== 41. the two languages line up ==")
 local english = CollectStringKeys(ADDON_DIR .. "/lang/strings.lua")
 local japanese = CollectStringKeys(ADDON_DIR .. "/lang/jp.lua")
 local missing, extra = {}, {}

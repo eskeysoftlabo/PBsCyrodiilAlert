@@ -149,7 +149,7 @@ addon.STYLES = {
 
 addon.MIN_FONT_SIZE, addon.MAX_FONT_SIZE = 14, 64
 addon.MIN_HUD_SECONDS, addon.MAX_HUD_SECONDS = 2, 30
-addon.MAX_OFFSET_X, addon.MAX_OFFSET_Y = 900, 500
+-- addon.MAX_OFFSET_X / MAX_OFFSET_Y are the screen's own size, set in Main.lua.
 
 -- ---------------------------------------------------------------------------------------
 -- Settings, read defensively

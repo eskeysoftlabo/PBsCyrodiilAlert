@@ -529,6 +529,32 @@ end
 
 addon.DEFAULTS = DEFAULTS
 addon.MIN_MAP_SIZE, addon.MAX_MAP_SIZE = 120, 700
+
+-- How far any surface may be moved from its anchor: the whole screen, in either direction.
+--
+-- These used to be a fixed 900 by 500, which reached only part of the screen -- anchored top
+-- right, a window could not be moved more than 900 units left, and on a 1920-wide interface
+-- the left half was out of reach. The real size is GuiRoot's, and it depends on the player's
+-- UI scale, so it is read rather than assumed: the full width and height either way means
+-- every point on the screen can be reached from any of the anchors.
+local FALLBACK_WIDTH, FALLBACK_HEIGHT = 1920, 1080
+
+function addon:ScreenSize()
+	if GuiRoot and GuiRoot.GetDimensions then
+		local ok, width, height = pcall(GuiRoot.GetDimensions, GuiRoot)
+		if ok and width and height and width > 0 and height > 0 then
+			return width, height
+		end
+	end
+	return FALLBACK_WIDTH, FALLBACK_HEIGHT
+end
+
+function addon:UpdateScreenLimits()
+	local width, height = self:ScreenSize()
+	self.MAX_OFFSET_X, self.MAX_OFFSET_Y = math.ceil(width), math.ceil(height)
+end
+
+addon:UpdateScreenLimits()
 addon.MIN_MAP_PIN, addon.MAX_MAP_PIN = 8, 48
 addon.MIN_INTERVAL, addon.MAX_INTERVAL = MIN_INTERVAL, MAX_INTERVAL
 addon.MIN_REPEAT, addon.MAX_REPEAT = MIN_REPEAT, MAX_REPEAT
@@ -2446,6 +2472,8 @@ end
 -- ---------------------------------------------------------------------------------------
 
 local function OnPlayerActivated()
+	-- Before the panel is built: its sliders take their range from the screen.
+	addon:UpdateScreenLimits()
 	if not addon.panelBuilt then
 		addon.panelBuilt = true
 		if addon.InitSettings then

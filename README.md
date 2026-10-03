@@ -87,7 +87,7 @@ kind of alert has its own switch for whether it appears there. Out of the box th
 | Typeface | five faces, all of them ones the console UI already has loaded |
 | Size | 14–64 |
 | Outline | thick outline, soft shadow (thin or thick), plain shadow, or none |
-| Position | top centre, middle, bottom centre, top left, top right — plus a sideways and an up/down offset |
+| Position | top centre, middle, bottom centre, top left, top right, bottom left, bottom right — plus a sideways and an up/down offset that reaches the whole screen |
 | How long each line stays | 2–30 s; up to three lines at once, a fourth pushes the oldest off |
 | Which alerts appear | one switch per alert |
 
@@ -249,6 +249,15 @@ anywhere else, nothing about it runs.
 `map probe` prints what the map is working with — Cyrodiil's map id, the current one, both maps'
 places in the shared space, and the player's position in each. If the pins on a console sit
 somewhere other than the keeps, that is the measurement that says why.
+
+## Position
+
+Every surface — the alerts, the summary, the output window, the map — is placed the same way: an
+anchor (a corner, an edge's centre, or the middle) and a sideways and an up/down offset from it.
+The offsets run the **full width and height of the screen in either direction**, read from
+`GuiRoot` because the interface's size depends on the player's UI scale. From any anchor, any
+point on the screen can be reached. (They were a fixed ±900 by ±500 before, which left most of a
+wide screen out of reach.)
 
 ## Colours
 
@@ -482,4 +491,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 397 checks.
+colours and every way it degrades are checked too. 405 checks.

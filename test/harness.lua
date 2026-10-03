@@ -374,7 +374,11 @@ DT_HIGH, DT_MEDIUM, DT_LOW = "high", "medium", "low"
 
 -- Set true to make SetDrawLayer/SetDrawTier throw, the way a client that refuses them would.
 DrawOrderRefused = false
+-- Deliberately not 1920x1080: the movement range has to come from the screen, and a stub the
+-- same size as the old fallback would not tell the two apart.
+ScreenWidth, ScreenHeight = 2560, 1440
 GuiRoot = { name = "GuiRoot" }
+function GuiRoot:GetDimensions() return ScreenWidth, ScreenHeight end
 
 -- Set true to make CreateTopLevelWindow fail, the way a client without it would.
 WindowManagerBroken = false
@@ -522,7 +526,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.0" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.1" end,
 	}
 end
 
