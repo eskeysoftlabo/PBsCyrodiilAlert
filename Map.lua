@@ -41,9 +41,8 @@ local TICK_NAME = "PBsCyrodiilAlertMapTick"
 local TICK_MS = 200
 
 -- What appears on it. Keeps, outposts, towns, scroll temples and the border keeps -- the
--- holdings the campaign is fought over, and the three home gates for bearings. Resources are
--- left off: at this scale there are three of them crowded against every keep, and they would
--- turn each keep into a smudge.
+-- holdings the campaign is fought over, and the three home gates for bearings -- and, on their
+-- own switch, the farms, mines and lumbermills around each keep.
 local SHOWN_TYPE = {}
 local function DeclareShownType(keepType)
 	if keepType ~= nil then
@@ -55,6 +54,16 @@ DeclareShownType(KEEPTYPE_OUTPOST)
 DeclareShownType(KEEPTYPE_TOWN)
 DeclareShownType(KEEPTYPE_ARTIFACT_KEEP)
 DeclareShownType(KEEPTYPE_BORDER_KEEP)
+
+-- Resources are drawn at the world map's own proportion to a keep (KEEP_RESOURCE_PIN_SIZE 27
+-- against KEEP_PIN_SIZE 53, mappin.lua), and UNDER the keeps rather than over them as the
+-- world map has it: at this scale the three of them sit almost on top of their keep, and on
+-- top they would hide it.
+local RESOURCE_SCALE = 27 / 53
+
+local function IsResource(keepType)
+	return KEEPTYPE_RESOURCE ~= nil and keepType == KEEPTYPE_RESOURCE
+end
 
 -- Carried things that matter to the whole campaign: the scrolls and the Daedric artifact. The
 -- same three the world map itself shows in AvA (worldmap.lua, IS_OBJECTIVE_TYPE_SHOWN_IN_AVA).
@@ -397,8 +406,8 @@ function map:Apply()
 	local pin = self:PinSize()
 	self.player:SetDimensions(pin, pin)
 	for _, keep in pairs(self.keepPins) do
-		keep.icon:SetDimensions(pin, pin)
-		keep.burst:SetDimensions(pin * 1.6, pin * 1.6)
+		keep.icon:SetDimensions(pin * keep.scale, pin * keep.scale)
+		keep.burst:SetDimensions(pin * keep.scale * 1.6, pin * keep.scale * 1.6)
 	end
 	for _, objective in pairs(self.objectivePins) do
 		objective:SetDimensions(pin, pin)
@@ -428,20 +437,23 @@ end
 -- The pins
 -- ---------------------------------------------------------------------------------------
 
-function map:KeepPin(keepId)
+function map:KeepPin(keepId, keepType)
 	local keep = self.keepPins[keepId]
 	if keep then
 		return keep
 	end
+	local resource = IsResource(keepType)
 	local name = WINDOW_NAME .. "Keep" .. tostring(keepId)
 	-- The burst sits under the keep, as the world map draws it (attack pins at level 30, keeps
 	-- at 50, mappin.lua).
 	keep = {
 		burst = NewTexture(name .. "Attack", self.window, 3),
-		icon = NewTexture(name, self.window, 5),
+		-- Resources one level under the keeps, so a keep is never hidden by its own farm.
+		icon = NewTexture(name, self.window, resource and 4 or 5),
+		scale = resource and RESOURCE_SCALE or 1,
 	}
 	keep.burst:SetTexture(PinTexture(MAP_PIN_TYPE_KEEP_ATTACKED_LARGE, ATTACK_TEXTURE))
-	local pin = self:PinSize()
+	local pin = self:PinSize() * keep.scale
 	keep.icon:SetDimensions(pin, pin)
 	keep.burst:SetDimensions(pin * 1.6, pin * 1.6)
 	self.keepPins[keepId] = keep
@@ -462,9 +474,12 @@ function map:RefreshKeeps()
 		return
 	end
 	local seen = {}
+	local resources = Settings().resources ~= false
 	for index = 1, (GetNumKeeps() or 0) do
 		local keepId, bgContext = GetKeepKeysByIndex(index)
-		if keepId and addon.IsThisCampaign(bgContext) and SHOWN_TYPE[GetKeepType(keepId)] then
+		local keepType = keepId and GetKeepType(keepId)
+		if keepId and addon.IsThisCampaign(bgContext)
+			and (SHOWN_TYPE[keepType] or (resources and IsResource(keepType))) then
 			local pinType, x, y = GetKeepPinInfo(keepId, bgContext)
 			if pinType and pinType ~= MAP_PIN_TYPE_INVALID then
 				local cx, cy = self:ToCyrodiil(x, y)
@@ -477,7 +492,7 @@ function map:RefreshKeeps()
 				local position = self.keepPositions[keepId]
 				if position then
 					seen[keepId] = true
-					local keep = self:KeepPin(keepId)
+					local keep = self:KeepPin(keepId, keepType)
 					-- No usable art for this pin type: no icon, rather than some other icon
 					-- standing in for it. An attack burst still shows if it is under attack.
 					local texture = PinTexture(pinType, nil)

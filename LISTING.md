@@ -178,11 +178,11 @@ in a corner.
 
 シロディール全体の地図を画面の隅に表示できます。
 
-・砦・前哨・村・巻物神殿・国境砦を、ゲーム自身のピンの絵で所有陣営の色に表示します。
+・砦・前哨・村・巻物神殿・国境砦と、その周りの資源（農場・鉱山・製材所）を、ゲーム自身のピンの絵で所有陣営の色に表示します。
 　持ち主が替われば色も替わります。
 ・攻撃を受けている拠点には、ワールドマップと同じ攻撃マークを背後に表示します。
 ・巻物とヴォレルドルングを今ある場所に、自分の位置をカメラの向きの矢印で表示します。
-・トランシスタスの経路を、ワールドマップと同じく所有陣営の色で、戦闘で寸断されている間は破線で
+・トランシタスの経路を、ワールドマップと同じく所有陣営の色で、戦闘で寸断されている間は破線で
 　表示します（設定で非表示にもできます）。
 ・大きさ・ピンの大きさ・不透明度・表示位置・重なり順を設定できます。
 
@@ -248,7 +248,8 @@ in a corner.
 　/pbalert colour <通知> chat | hud <色名または RRGGBB>       色の変更
 　/pbalert colour follow on | off   画面表示にチャット欄の色を使うか
 　/pbalert map on | off             全体マップ
-　/pbalert map links on | off       全体マップのトランシスタス経路
+　/pbalert map links on | off       全体マップのトランシタス経路
+　/pbalert map resources on | off   全体マップの資源
 　/pbalert map probe                全体マップが使っている値を表示
 　/pbalert board                    戦況をチャット欄に表示
 　/pbalert board on | off           戦況を画面に表示
@@ -410,8 +411,8 @@ frozen under-attack column is the worst of the three possible states.
 
 ■ The whole of Cyrodiil (optional, off by default)
 
-An overview map in a corner: every keep, outpost, town, scroll temple and border keep in the
-game's own pin art for its owner, the attack burst behind any keep under attack, the scrolls and
+An overview map in a corner: every keep, outpost, town, scroll temple and border keep -- and the
+farms, mines and lumbermills around them -- in the game's own pin art for its owner, the attack burst behind any keep under attack, the scrolls and
 Volendrung where they are, the transitus network in its owners' colours (dashed while fighting
 has cut a link), and you, facing where the camera faces. Size, pin size, opacity,
 position and draw order are settings.
@@ -475,6 +476,7 @@ Chat commands:
   /pbalert colour follow on | off   whether the screen uses the chat colours
   /pbalert map on | off             the overview map
   /pbalert map links on | off       the transitus network on the map
+  /pbalert map resources on | off   the resources on the map
   /pbalert map probe                what the map is working with
   /pbalert board                    print the campaign summary in chat
   /pbalert board on | off           keep it on screen

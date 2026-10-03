@@ -293,7 +293,7 @@ local strings = {
 
 	-- ---- The overview map --------------------------------------------------------------
 	SI_PBSCA_SECTION_MAP = "Overview map",
-	SI_PBSCA_SECTION_MAP_NOTE = "The whole of Cyrodiil in a corner: every keep, outpost and town in its owner's colours, a burst behind the ones under attack, the scrolls and Volendrung where they are, and you. It is drawn from the map's own tiles and pins, and does not borrow the game's world map -- so it runs alongside a minimap add-on instead of fighting it for the same control. Shown in Cyrodiil only, and hidden whenever a menu is up.",
+	SI_PBSCA_SECTION_MAP_NOTE = "The whole of Cyrodiil in a corner: every keep, outpost, town and resource in its owner's colours, a burst behind the ones under attack, the scrolls and Volendrung where they are, and you. It is drawn from the map's own tiles and pins, and does not borrow the game's world map -- so it runs alongside a minimap add-on instead of fighting it for the same control. Shown in Cyrodiil only, and hidden whenever a menu is up.",
 	SI_PBSCA_MAP_ENABLED = "Show the overview map",
 	SI_PBSCA_MAP_ENABLED_TOOLTIP = "Draws Cyrodiil in a corner of the screen while you are there. Off, or anywhere else, nothing about it runs.",
 	SI_PBSCA_MAP_SIZE = "Map size",
@@ -311,6 +311,9 @@ local strings = {
 	SI_PBSCA_MAP_LINKS = "Show the transitus network",
 	SI_PBSCA_MAP_LINKS_TOOLTIP = "The lines between keeps that say where a transitus shrine can take you, drawn as the world map draws them: each link in its owner's colour, faint when nobody holds it, and dashed while fighting has cut it.",
 	SI_PBSCA_HELP_MAP_LINKS = "/pbalert map links on | off -- the transitus network on the overview map",
+	SI_PBSCA_MAP_RESOURCES = "Show the resources",
+	SI_PBSCA_MAP_RESOURCES_TOOLTIP = "The farm, mine and lumbermill around each keep, in their owner's colours, drawn at the world map's own size against a keep and under the keeps, so a keep is never hidden by its own farm.",
+	SI_PBSCA_HELP_MAP_RESOURCES = "/pbalert map resources on | off -- the farms, mines and lumbermills on the overview map",
 	SI_PBSCA_MAP_DRAW = "Map draw order",
 	SI_PBSCA_MAP_DRAW_TOOLTIP = "Where the map sits when something else wants the same piece of screen.",
 	SI_PBSCA_STATUS_MAP = "overview map: %s",

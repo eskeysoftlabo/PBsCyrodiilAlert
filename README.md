@@ -225,7 +225,10 @@ An overview map, on its own switch, sized and placed like everything else:
   links off` to hide it);
 - you, as the world map's arrow, turned the way the camera faces.
 
-Resources are left off: at this scale there are three crowded against every keep.
+The farm, mine and lumbermill around each keep are drawn too, on their own switch (`/pbalert
+map resources off`): at the world map's own proportion to a keep (27 against 53), and *under* the
+keeps rather than over them as the world map has it — at this scale the three sit almost on top
+of their keep, and drawn over it they would hide it.
 
 **It does not borrow the game's world map.** A minimap add-on — PB's MiniMap, Votan's — works by
 parking the world map on the HUD, and the world map is one control showing one map at one
@@ -258,6 +261,7 @@ anywhere else, nothing about it runs.
 ```
 /pbalert map on | off
 /pbalert map links on | off
+/pbalert map resources on | off
 /pbalert map probe
 ```
 
@@ -506,4 +510,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 450 checks.
+colours and every way it degrades are checked too. 457 checks.

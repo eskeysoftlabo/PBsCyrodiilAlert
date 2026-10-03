@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.6.1")
+check("version read from manifest", addon.version, "2.6.2")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 90)
+check("panel rows built", #PanelRows, 91)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.1"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.2"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1229,7 +1229,18 @@ check("at its place on the map", near(chalman.icon.anchors[1].x), 75)
 check("both ways", near(chalman.icon.anchors[1].y), 150)
 check("in its owner's art", chalman.icon.texture, "EsoUI/Art/MapPins/AvA_largeKeep_Ebonheart.dds")
 check("no burst while it is quiet", chalman.burst.hidden, true)
-check("resources are left off", addon.map.keepPins[31], nil)
+-- Resources, around their keep: at the world map's own proportion, and under the keeps.
+local mine = addon.map.keepPins[31]
+check("resources are drawn", mine ~= nil and mine.icon.hidden, false)
+check("at their place", near(mine.icon.anchors[1].x), 90)
+check("at half a keep, as the world map has them", near(mine.icon.width), near(18 * 27 / 53))
+check("under the keeps, so a keep is never hidden by its farm", mine.icon.drawLevel < chalman.icon.drawLevel, true)
+check("over the transitus lines", mine.icon.drawLevel > 2, true)
+Slash("map resources off")
+check("and they can be switched off", mine.icon.hidden, true)
+check("leaving the keeps", chalman.icon.hidden, false)
+Slash("map resources on")
+check("and back on", mine.icon.hidden, false)
 check("and bridges", addon.map.keepPins[40], nil)
 
 SetKeep(CHALMAN, { attacked = true })
@@ -1575,7 +1586,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.1")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.2")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)
