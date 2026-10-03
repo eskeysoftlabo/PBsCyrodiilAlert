@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.7.0")
+check("version read from manifest", addon.version, "2.7.1")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 95)
+check("panel rows built", #PanelRows, 96)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.7.0"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.7.1"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1341,9 +1341,25 @@ check("at its place", near(road.anchors[1].y), 150)
 check("to the other", near(road.anchors[2].x), 150)
 check("both ways", near(road.anchors[2].y), 225)
 check("laid TOPLEFT to BOTTOMRIGHT, as the world map lays a line", road.anchors[2].point, BOTTOMRIGHT)
-check("in its owner's colour", string.format("%.3f", road.colour[1]), string.format("%.3f", 0xE2 / 255))
+-- Ours and active: the shrine's green, as the world map colours a route you can take.
+check("a route of ours you can take is green", table.concat({ road.colour[1], road.colour[2], road.colour[3], road.colour[4] }, ","), "0,1,0,0.4")
 check("solid while it can be used", road.texture, "EsoUI/Art/AvA/AvA_transitLine.dds")
+-- Another alliance's link keeps its owner's colour.
+check("an enemy route keeps its owner's colour", string.format("%.3f", addon.map.links[2].colour[1]), string.format("%.3f", 0xFF / 255))
+-- Ours but not usable: the shrine's faint white.
+TransitLinks[1].type = FAST_TRAVEL_LINK_INACTIVE
+Advance(5)
+check("a route of ours you cannot take is faint white", table.concat({ road.colour[1], road.colour[2], road.colour[3], road.colour[4] }, ","), "1,1,1,0.2")
+TransitLinks[1].type = FAST_TRAVEL_LINK_IN_COMBAT
+Advance(5)
+check("and so is one cut by fighting", road.colour[4], 0.2)
+check("dashed as well", road.texture, "EsoUI/Art/AvA/AvA_transitLine_dashed.dds")
+TransitLinks[1].type = FAST_TRAVEL_LINK_ACTIVE
+-- Off: every link in its owner's colour, as before.
+Slash("map ready off")
+check("off, ours in our colour", string.format("%.3f", road.colour[1]), string.format("%.3f", 0xE2 / 255))
 check("at the owned alpha", road.colour[4], 0.8)
+Slash("map ready on")
 check("dashed while fighting cuts it", addon.map.links[2].texture, "EsoUI/Art/AvA/AvA_transitLine_dashed.dds")
 check("faint when nobody holds it", addon.map.links[3].colour[4], 0.2)
 check("under the keeps", road.drawLevel < chalman.icon.drawLevel, true)
@@ -1647,7 +1663,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.7.0")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.7.1")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

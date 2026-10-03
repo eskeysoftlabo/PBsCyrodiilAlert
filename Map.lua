@@ -84,6 +84,14 @@ local LINK_TEXTURE = "EsoUI/Art/AvA/AvA_transitLine.dds"
 local LINK_TEXTURE_IN_COMBAT = "EsoUI/Art/AvA/AvA_transitLine_dashed.dds"
 local LINK_ALPHA_OWNED, LINK_ALPHA_UNOWNED = 0.8, 0.2
 
+-- At a shrine the world map colours your own alliance's links by whether you can travel them:
+-- green when the link is active, a faint white when it is not (ZO_KeepNetwork.LINK_READY_COLOR
+-- and LINK_NOT_READY_COLOR, worldmap.lua). Every other link keeps its owner's colour. The
+-- overview map can do the same all the time, which is the point of having it on the HUD: the
+-- routes you could take are visible before you reach a shrine.
+local LINK_READY = { 0, 1, 0, 0.4 }
+local LINK_NOT_READY = { 1, 1, 1, 0.2 }
+
 local PLAYER_TEXTURE = "EsoUI/Art/MapPins/UI-WorldMapPlayerPip.dds"
 
 -- The group's pins. The world map picks these through a file-local table (mappin.lua:2408), so
@@ -587,6 +595,8 @@ function map:RefreshLinks()
 	-- The campaign in front of us: the same bgContext the keep watch uses.
 	local bgContext = BGQUERY_LOCAL
 	local count = GetNumKeepTravelNetworkLinks(bgContext) or 0
+	local highlight = Settings().linksReady ~= false
+	local playerAlliance = GetUnitAlliance and GetUnitAlliance("player")
 	local size = self:Size()
 	for index = 1, count do
 		local linkType, owner, _, startX, startY, endX, endY = GetKeepTravelNetworkLinkInfo(index, bgContext)
@@ -608,9 +618,15 @@ function map:RefreshLinks()
 			link:SetAnchor(BOTTOMRIGHT, self.window, TOPLEFT, position.bx * size, position.by * size)
 			local inCombat = FAST_TRAVEL_LINK_IN_COMBAT ~= nil and linkType == FAST_TRAVEL_LINK_IN_COMBAT
 			link:SetTexture(inCombat and LINK_TEXTURE_IN_COMBAT or LINK_TEXTURE)
-			local r, g, b = HexToRgb(addon.AllianceHex(owner))
-			local owned = owner ~= nil and owner ~= ALLIANCE_NONE
-			link:SetColor(r, g, b, owned and LINK_ALPHA_OWNED or LINK_ALPHA_UNOWNED)
+			if highlight and owner == playerAlliance and owner ~= ALLIANCE_NONE then
+				local ready = FAST_TRAVEL_LINK_ACTIVE ~= nil and linkType == FAST_TRAVEL_LINK_ACTIVE
+				local colour = ready and LINK_READY or LINK_NOT_READY
+				link:SetColor(colour[1], colour[2], colour[3], colour[4])
+			else
+				local r, g, b = HexToRgb(addon.AllianceHex(owner))
+				local owned = owner ~= nil and owner ~= ALLIANCE_NONE
+				link:SetColor(r, g, b, owned and LINK_ALPHA_OWNED or LINK_ALPHA_UNOWNED)
+			end
 			link:SetHidden(false)
 		else
 			link:SetHidden(true)

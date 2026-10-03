@@ -701,6 +701,22 @@ function addon:InitSettings()
 	settings:AddSetting(
 		{
 			type = LibHarvensAddonSettings.ST_CHECKBOX,
+			label = GetString(SI_PBSCA_MAP_LINKS_READY),
+			tooltip = GetString(SI_PBSCA_MAP_LINKS_READY_TOOLTIP),
+			default = self.DEFAULTS.map.linksReady,
+			getFunction = function()
+				return self.sv.map.linksReady ~= false
+			end,
+			setFunction = function(value)
+				self.sv.map.linksReady = value
+				self.map:Refresh()
+			end
+		}
+	)
+
+	settings:AddSetting(
+		{
+			type = LibHarvensAddonSettings.ST_CHECKBOX,
 			label = GetString(SI_PBSCA_MAP_RESOURCES),
 			tooltip = GetString(SI_PBSCA_MAP_RESOURCES_TOOLTIP),
 			default = self.DEFAULTS.map.resources,

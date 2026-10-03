@@ -497,6 +497,8 @@ local DEFAULTS = {
 		draw = "FRONT",
 		-- The transitus network, as the world map shows it.
 		links = true,
+		-- Your own alliance's links in the shrine's colours: green where you can travel.
+		linksReady = true,
 		-- The farms, mines and lumbermills around each keep.
 		resources = true,
 		-- Your own arrow, and how big it is. Smaller than a keep, as on the world map.
@@ -2111,6 +2113,7 @@ function addon:PrintHelp()
 	Line(GetString(SI_PBSCA_HELP_LOG_CLEAR))
 	Line(GetString(SI_PBSCA_HELP_MAP))
 	Line(GetString(SI_PBSCA_HELP_MAP_LINKS))
+	Line(GetString(SI_PBSCA_HELP_MAP_LINKS_READY))
 	Line(GetString(SI_PBSCA_HELP_MAP_RESOURCES))
 	Line(GetString(SI_PBSCA_HELP_MAP_PLAYER))
 	Line(GetString(SI_PBSCA_HELP_MAP_GROUP))
@@ -2307,6 +2310,20 @@ function addon:HandleCommand(argumentString)
 			self.map:Refresh()
 			self:RefreshPanel()
 			Print(GetString(SI_PBSCA_MAP_RESOURCES) .. ": " .. OnOff(value))
+			return
+		end
+
+		-- "map ready on|off" -- the shrine's green for the routes you can take.
+		if second == "ready" or second == "green" then
+			local value = ParseSwitch(words[3] or "")
+			if value == nil then
+				Print(GetString(SI_PBSCA_ERROR_ON_OR_OFF))
+				return
+			end
+			self.sv.map.linksReady = value
+			self.map:Refresh()
+			self:RefreshPanel()
+			Print(GetString(SI_PBSCA_MAP_LINKS_READY) .. ": " .. OnOff(value))
 			return
 		end
 
