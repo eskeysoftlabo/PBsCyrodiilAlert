@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.4.0")
+check("version read from manifest", addon.version, "2.5.0")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 79)
+check("panel rows built", #PanelRows, 89)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.4.0"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.0"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1168,7 +1168,138 @@ Slash("ava on")
 SetInAvA(true)
 Fire(EVENT_PLAYER_ACTIVATED)
 
-print("\n== 37. every row on the panel can be read ==")
+print("\n== 37. the overview map ==")
+-- Positions go through the shared space and back, so they are compared to within a hair.
+local function near(value) return math.floor((value or -999) * 1000 + 0.5) / 1000 end
+ResetWorld()
+SetObjectives({})
+check("off by default", addon.sv.map.enabled, false)
+check("and nothing is built", addon.map.window, nil)
+
+Slash("map on")
+local window = addon.map.window
+check("built when switched on", window ~= nil, true)
+check("and showing", window.hidden, false)
+check("the tick runs while it is up", UpdateRunning("PBsCyrodiilAlertMapTick"), true)
+check("Cyrodiil's own tiles, all nine", #addon.map.tiles, 9)
+check("by map id, without touching the world map", addon.map.tiles[5].texture, "Art/maps/cyrodiil/ava_whole_4.dds")
+-- Row-major, as the world map lays them out: tile 4 starts the second row.
+check("tile 4 opens the second row", near(addon.map.tiles[4].anchors[1].x), 0)
+check("a third of the way down", near(addon.map.tiles[4].anchors[1].y), 100)
+check("square, at the default size", window.width, 300)
+
+-- Keeps land where they are on Cyrodiil, in their owner's art.
+local chalman = addon.map.keepPins[11]
+check("a keep is pinned", chalman ~= nil, true)
+check("at its place on the map", near(chalman.icon.anchors[1].x), 75)
+check("both ways", near(chalman.icon.anchors[1].y), 150)
+check("in its owner's art", chalman.icon.texture, "EsoUI/Art/MapPins/AvA_largeKeep_Ebonheart.dds")
+check("no burst while it is quiet", chalman.burst.hidden, true)
+check("resources are left off", addon.map.keepPins[31], nil)
+check("and bridges", addon.map.keepPins[40], nil)
+
+SetKeep(CHALMAN, { attacked = true })
+Advance(5)
+check("a burst behind a keep under attack", chalman.burst.hidden, false)
+check("drawn under the keep", chalman.burst.drawLevel < chalman.icon.drawLevel, true)
+SetKeep(CHALMAN, { alliance = AD })
+Advance(5)
+check("a keep that changes hands changes colour", chalman.icon.texture, "EsoUI/Art/MapPins/AvA_largeKeep_Aldmeri.dds")
+SetKeep(CHALMAN, { alliance = EP, attacked = false })
+Advance(5)
+
+-- The player, and the way they face.
+Advance(1)
+check("the player is on it", addon.map.player.hidden, false)
+check("where they stand", near(addon.map.player.anchors[1].x), 120)
+check("both ways", near(addon.map.player.anchors[1].y), 180)
+check("facing where the camera faces", addon.map.player.rotation, 1.25)
+
+-- The world map showing a city instead. Every pin function now answers in the city's
+-- coordinates; converted, they must land exactly where they did.
+CurrentMapId = CITY_MAP_ID
+Advance(5)
+check("the world map on a city moves no keep", near(chalman.icon.anchors[1].x), 75)
+check("not even a little", math.abs(chalman.icon.anchors[1].y - 150) < 0.001, true)
+check("nor the player", math.abs(addon.map.player.anchors[1].x - 120) < 0.001, true)
+-- A map whose place in the shared space is unknown: nothing to convert with, so the keeps stay
+-- where they were last seen rather than going somewhere invented.
+CurrentMapId = 500
+Advance(5)
+check("an unknown map leaves keeps where they were", near(chalman.icon.anchors[1].x), 75)
+check("and hides the player rather than guess", addon.map.player.hidden, true)
+CurrentMapId = CYRODIIL_MAP_ID
+
+-- A pin type whose art is a function is not called and not substituted.
+ZO_MapPin.PIN_DATA[202].texture = function() error("client code was called") end
+Advance(5)
+check("art that is a function is never called", chalman.icon.hidden, true)
+ZO_MapPin.PIN_DATA[202].texture = "EsoUI/Art/MapPins/AvA_largeKeep_Ebonheart.dds"
+Advance(5)
+
+-- The scrolls and the hammer, where they are.
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD, pinType = 202 },
+})
+GetObjectivePinInfo = (function(real)
+	return function(keepId, objectiveId, bg)
+		local x, y = GetMapPlayerPosition("player")
+		return real(keepId, objectiveId, bg), 0.5 * x, 0.5 * y
+	end
+end)(GetObjectivePinInfo)
+Advance(5)
+check("the artifact is pinned", addon.map.objectivePins[1] and addon.map.objectivePins[1].hidden, false)
+SetObjectives({})
+Advance(5)
+check("and gone when it is", addon.map.objectivePins[1].hidden, true)
+
+-- Over the game only. A menu up: hidden; back to the game: shown.
+CurrentScene = INVENTORY_SCENE
+Advance(1)
+check("hidden under a menu", window.hidden, true)
+CurrentScene = HUD_UI_SCENE
+Advance(1)
+check("back over the game", window.hidden, false)
+CurrentScene = HUD_SCENE
+
+-- The settings move and size it.
+PanelRow("Map size").setFunction(400)
+check("bigger", window.width, 400)
+check("and the keeps go with it", near(chalman.icon.anchors[1].x), 100)
+PanelRow("Pin size").setFunction(30)
+check("pins resize", chalman.icon.width, 30)
+PanelRow("Map position").setFunction(nil, nil, { data = "BOTTOMLEFT" })
+check("anchored where it was put", window.anchors[1].point, "BOTTOMLEFT")
+PanelRow("Map opacity").setFunction(50)
+check("see-through when asked", window.alpha, 0.5)
+PanelRow("Map draw order").setFunction(nil, nil, { data = "BACK" })
+check("its own draw order", window.drawLayer, "background")
+
+-- Cyrodiil only. The Imperial City is a different map, and outside nothing runs.
+SetCampaign({ imperialCity = true })
+Fire(EVENT_PLAYER_ACTIVATED)
+check("not in the Imperial City", window.hidden, true)
+check("and nothing ticking there", UpdateRunning("PBsCyrodiilAlertMapTick"), false)
+SetCampaign({ imperialCity = false })
+SetInAvA(false)
+Fire(EVENT_PLAYER_ACTIVATED)
+check("not outside Cyrodiil", window.hidden, true)
+check("nothing ticking", UpdateRunning("PBsCyrodiilAlertMapTick"), false)
+SetInAvA(true)
+Fire(EVENT_PLAYER_ACTIVATED)
+check("back on the way in", window.hidden, false)
+
+ClearOutput()
+Slash("map probe")
+check("the probe says what it is working with", Said("cyrodiil=16"), true)
+check("and where it thinks the player is", Said("player:"), true)
+
+Slash("map off")
+check("off is off", window.hidden, true)
+check("and nothing ticking", UpdateRunning("PBsCyrodiilAlertMapTick"), false)
+
+print("\n== 38. every row on the panel can be read ==")
 -- LibHarvensAddonSettings calls getFunction on every row when it builds and when it updates.
 -- One row that answers with nil -- or throws -- takes the whole settings panel down with it,
 -- which is exactly what a slider did on a live console: its reader's name was derived from the
@@ -1201,7 +1332,7 @@ for _, row in ipairs(PanelRows) do
 end
 check("and every slider reads back what it was set to", table.concat(roundTrips, ", "), "")
 
-print("\n== 38. the panel ==")
+print("\n== 39. the panel ==")
 -- A heading with nothing under it draws as an empty collapsible row. Every heading has to be
 -- followed by something that is not another heading, and the panel must not end on one.
 local emptySections = {}
@@ -1215,7 +1346,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.4.0")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.0")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)
@@ -1229,7 +1360,7 @@ check("and the panel agrees", PanelRow("Towns").getFunction(), false)
 PanelRow("Towns").setFunction(true)
 check("and the panel can set it back", addon:GroupEnabled("towns"), true)
 
-print("\n== 39. the two languages line up ==")
+print("\n== 40. the two languages line up ==")
 local english = CollectStringKeys(ADDON_DIR .. "/lang/strings.lua")
 local japanese = CollectStringKeys(ADDON_DIR .. "/lang/jp.lua")
 local missing, extra = {}, {}

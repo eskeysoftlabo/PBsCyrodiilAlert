@@ -482,6 +482,20 @@ local DEFAULTS = {
 		-- other two are for when the corner you want is one something else is already using.
 		draw = "FRONT",
 	},
+	-- The overview map. Off until asked for, like every other thing drawn over the game.
+	-- (Its limits live here rather than in Map.lua so the settings panel can be built from
+	-- this file alone: a panel row that reads a limit from a file that failed to load takes
+	-- the whole panel down with it.)
+	map = {
+		enabled = false,
+		size = 300,
+		pinSize = 18,
+		opacity = 90,
+		position = "TOPRIGHT",
+		offsetX = -24,
+		offsetY = 220,
+		draw = "FRONT",
+	},
 	-- The campaign summary. Its own switch, its own size and its own corner; the typeface and
 	-- outline come from the alert display, because two on-screen texts from one add-on in two
 	-- different faces looks like a mistake rather than a choice.
@@ -514,6 +528,8 @@ for _, kind in ipairs(KINDS) do
 end
 
 addon.DEFAULTS = DEFAULTS
+addon.MIN_MAP_SIZE, addon.MAX_MAP_SIZE = 120, 700
+addon.MIN_MAP_PIN, addon.MAX_MAP_PIN = 8, 48
 addon.MIN_INTERVAL, addon.MAX_INTERVAL = MIN_INTERVAL, MAX_INTERVAL
 addon.MIN_REPEAT, addon.MAX_REPEAT = MIN_REPEAT, MAX_REPEAT
 
@@ -539,6 +555,14 @@ addon.hud = {
 addon.board = {
 	Refresh = function() end,
 	Available = function() return false end,
+}
+
+-- Filled in by Map.lua.
+addon.map = {
+	Refresh = function() end,
+	RefreshKeeps = function() end,
+	Available = function() return false end,
+	Probe = function() return {} end,
 }
 
 -- Also filled in by Hud.lua. Push returning false is what sends a line to chat instead, so the
@@ -968,6 +992,8 @@ local function IsThisCampaign(bgContext)
 	end
 	return true
 end
+
+addon.IsThisCampaign = IsThisCampaign
 
 -- ---------------------------------------------------------------------------------------
 -- The Daedric artifact (Volendrung)
@@ -1693,6 +1719,7 @@ function addon:Scan()
 
 	self.tally = tally
 	self.board:Refresh()
+	self.map:RefreshKeeps()
 
 	-- A holding that has dropped out of the list -- campaign changed under us, or the client
 	-- stopped reporting it -- is forgotten without an ending. We do not know how its fight
@@ -1742,8 +1769,10 @@ function addon:ApplyTimer()
 		self:Forget()
 		self.tally = nil
 		self.board:Refresh()
+		self.map:Refresh()
 		return
 	end
+	self.map:Refresh()
 
 	em:RegisterForUpdate(self.name, self:IntervalSeconds() * 1000, function()
 		self:Scan()
@@ -1800,6 +1829,11 @@ function addon:ResetSettings()
 	end
 	self.log:Clear()
 	self.log:Refresh()
+	self.sv.map = {}
+	for field, value in pairs(DEFAULTS.map) do
+		self.sv.map[field] = value
+	end
+	self.map:Refresh()
 	self.sv.board = {}
 	for field, value in pairs(DEFAULTS.board) do
 		self.sv.board[field] = value
@@ -1904,6 +1938,10 @@ function addon:PrintStatus()
 	end
 
 	Print(GetString(SI_PBSCA_STATUS_BOARD), OnOff(self.sv.board.enabled))
+	Print(GetString(SI_PBSCA_STATUS_MAP), OnOff(self.sv.map.enabled))
+	if self.sv.map.enabled and self.map.failed then
+		Print(GetString(SI_PBSCA_STATUS_MAP_FAILED))
+	end
 	if self.sv.board.enabled and self.board.drawOrderRefused then
 		Print(GetString(SI_PBSCA_BOARD_DRAW_REFUSED))
 	end
@@ -1982,6 +2020,8 @@ function addon:PrintHelp()
 	Line(GetString(SI_PBSCA_HELP_LOG))
 	Line(GetString(SI_PBSCA_HELP_LOG_DRAW))
 	Line(GetString(SI_PBSCA_HELP_LOG_CLEAR))
+	Line(GetString(SI_PBSCA_HELP_MAP))
+	Line(GetString(SI_PBSCA_HELP_MAP_PROBE))
 	Line(GetString(SI_PBSCA_HELP_BOARD))
 	Line(GetString(SI_PBSCA_HELP_BOARD_DRAW))
 	Line(GetString(SI_PBSCA_HELP_BOARD_POP))
@@ -2122,6 +2162,30 @@ function addon:HandleCommand(argumentString)
 				or SI_PBSCA_LOG_TO_WINDOW))
 		if where ~= "chat" and not self.log:Available() then
 			Print(GetString(SI_PBSCA_STATUS_LOG_FAILED))
+		end
+		return
+	end
+
+	-- "map on|off", and "map probe" for what the map is working with.
+	if command == "map" then
+		local second = words[2] or ""
+		if second == "probe" then
+			for _, line in ipairs(self.map:Probe()) do
+				Print("%s", line)
+			end
+			return
+		end
+		local value = ParseSwitch(second)
+		if value == nil then
+			Print(GetString(SI_PBSCA_ERROR_ON_OR_OFF))
+			return
+		end
+		self.sv.map.enabled = value
+		self.map:Refresh()
+		self:RefreshPanel()
+		Print(GetString(SI_PBSCA_STATUS_MAP), OnOff(value))
+		if value and self.map.failed then
+			Print(GetString(SI_PBSCA_STATUS_MAP_FAILED))
 		end
 		return
 	end

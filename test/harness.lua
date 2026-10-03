@@ -263,6 +263,7 @@ function GetCurrentCampaignId() return campaign.id end
 -- The Imperial City has its own campaigns, and its own set of things worth counting.
 function IsImperialCityCampaign(id) return campaign.imperialCity == true and id == campaign.id end
 function IsInImperialCity() return campaign.imperialCity == true end
+function IsInCyrodiil() return IsInAvAZone() and not campaign.imperialCity end
 function GetCampaignName(id) return id == campaign.id and campaign.name or "" end
 function GetCampaignAllianceScore(id, alliance)
 	if id ~= campaign.id then return 0 end
@@ -367,7 +368,7 @@ TOPLEFT, TOPRIGHT, BOTTOMLEFT, BOTTOMRIGHT = "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT"
 TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT = "left", "centre", "right"
 TEXT_ALIGN_TOP, TEXT_ALIGN_BOTTOM = "top", "bottom"
 TEXT_WRAP_MODE_ELLIPSIS, TEXT_WRAP_MODE_TRUNCATE = "ellipsis", "truncate"
-CT_LABEL, CT_BACKDROP = "label", "backdrop"
+CT_LABEL, CT_BACKDROP, CT_TEXTURE = "label", "backdrop", "texture"
 DL_OVERLAY, DL_CONTROLS, DL_BACKGROUND = "overlay", "controls", "background"
 DT_HIGH, DT_MEDIUM, DT_LOW = "high", "medium", "low"
 
@@ -395,6 +396,10 @@ local function NewControl(name)
 	function control:GetText() return self.text end
 	function control:SetHorizontalAlignment(align) self.horizontal = align end
 	function control:SetVerticalAlignment(align) self.vertical = align end
+	function control:SetTexture(path) self.texture = path end
+	function control:SetTextureRotation(angle) self.rotation = angle end
+	function control:SetDrawLevel(level) self.drawLevel = level end
+	function control:SetAlpha(alpha) self.alpha = alpha end
 	function control:SetWrapMode(mode) self.wrapMode = mode end
 	function control:SetMaxLineCount(count) self.maxLineCount = count end
 	function control:SetCenterColor(r, g, b, a) self.colour = { r, g, b, a } end
@@ -449,11 +454,75 @@ function HudColour(needle)
 	end
 end
 
+-- ---- maps and pins (the overview map) -----------------------------------------------
+-- Cyrodiil is map 16, 3x3 tiles, sitting at (0.5, 0.4) with side 0.2 in the shared space. A
+-- city inside it is map 99, a small square further in. The pin functions answer in the
+-- CURRENT map's coordinates, as the client's do, so the overview map's conversion is what the
+-- tests exercise -- a build that forgot it would draw every pin in the wrong place while the
+-- world map shows the city.
+CYRODIIL_MAP_ID, CITY_MAP_ID = 16, 99
+CurrentMapId = CYRODIIL_MAP_ID
+local UNIVERSAL = {
+	[CYRODIIL_MAP_ID] = { 0.5, 0.4, 0.2, 0.2 },
+	[CITY_MAP_ID] = { 0.55, 0.42, 0.02, 0.02 },
+}
+function GetCyrodiilMapIndex() return 14 end
+function GetMapIdByIndex(index) return index == 14 and CYRODIIL_MAP_ID or 0 end
+function GetMapNumTilesForMapId(id) if id == CYRODIIL_MAP_ID then return 3, 3 end return 1, 1 end
+function GetMapTileTextureForMapId(id, index) return "Art/maps/cyrodiil/ava_whole_" .. (index - 1) .. ".dds" end
+function GetCurrentMapId() return CurrentMapId end
+function GetUniversallyNormalizedMapInfo(id)
+	local u = UNIVERSAL[id]
+	if not u then return 0, 0, 0, 0 end
+	return u[1], u[2], u[3], u[4]
+end
+-- Cyrodiil coordinates to the current map's.
+local function FromCyrodiil(x, y)
+	local c, m = UNIVERSAL[CYRODIIL_MAP_ID], UNIVERSAL[CurrentMapId]
+	-- A map with no place in the shared space still answers something; the add-on must not
+	-- be able to make sense of it.
+	if not m then return 0.5, 0.5 end
+	local ux, uy = c[1] + x * c[3], c[2] + y * c[4]
+	return (ux - m[1]) / m[3], (uy - m[2]) / m[4]
+end
+
+MAP_PIN_TYPE_INVALID = 0
+MAP_PIN_TYPE_KEEP_ATTACKED_LARGE = 300
+ZO_MapPin = { PIN_DATA = {
+	[MAP_PIN_TYPE_KEEP_ATTACKED_LARGE] = { texture = "EsoUI/Art/MapPins/AvA_attackBurst_64.dds" },
+	[201] = { texture = "EsoUI/Art/MapPins/AvA_largeKeep_Aldmeri.dds" },
+	[202] = { texture = "EsoUI/Art/MapPins/AvA_largeKeep_Ebonheart.dds" },
+	[203] = { texture = "EsoUI/Art/MapPins/AvA_largeKeep_Daggerfall.dds" },
+	[204] = { texture = function() return "never called" end },
+} }
+-- Where each keep is on Cyrodiil, by keep id.
+KeepPlaces = { [11] = { 0.25, 0.5 }, [12] = { 0.75, 0.5 }, [20] = { 0.5, 0.75 }, [31] = { 0.3, 0.55 }, [40] = { 0.5, 0.5 } }
+function GetKeepPinInfo(keepId, bgContext)
+	local place = KeepPlaces[keepId]
+	local alliance = GetKeepAlliance(keepId, bgContext)
+	if not place then return MAP_PIN_TYPE_INVALID, 0, 0 end
+	local x, y = FromCyrodiil(place[1], place[2])
+	return 200 + (alliance or 0), x, y
+end
+PlayerPlace = { 0.4, 0.6 }
+function GetMapPlayerPosition(unitTag)
+	local x, y = FromCyrodiil(PlayerPlace[1], PlayerPlace[2])
+	return x, y, 0, true, false
+end
+function GetPlayerCameraHeading() return 1.25 end
+
+-- Scenes: read, never touched.
+HUD_SCENE, HUD_UI_SCENE = { name = "hud" }, { name = "hudui" }
+SIEGE_BAR_SCENE, SIEGE_BAR_UI_SCENE = { name = "siegeBar" }, { name = "siegeBarUI" }
+INVENTORY_SCENE = { name = "inventory" }
+CurrentScene = HUD_SCENE
+SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
+
 -- ---- add-on manager -----------------------------------------------------------------
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.4.0" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.0" end,
 	}
 end
 
@@ -520,6 +589,7 @@ function Slash(argumentString) SLASH_COMMANDS["/pbalert"](argumentString) end
 dofile(DIR .. "/lang/strings.lua")
 dofile(DIR .. "/Main.lua")
 dofile(DIR .. "/Hud.lua")
+dofile(DIR .. "/Map.lua")
 dofile(DIR .. "/Settings.lua")
 
 -- ---- what the add-on said, wherever it put it ---------------------------------------

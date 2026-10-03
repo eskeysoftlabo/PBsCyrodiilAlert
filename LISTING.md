@@ -173,6 +173,20 @@ in a corner.
 シロディールの外や監視オフのときは表示を消します。得点だけ正しくて「攻撃中」が
 止まったまま残るのが一番良くない状態だからです。
 
+■ 全体マップ（任意・初期はオフ）
+
+シロディール全体の地図を画面の隅に表示できます。
+
+・砦・前哨・村・巻物神殿・国境砦を、ゲーム自身のピンの絵で所有陣営の色に表示します。
+　持ち主が替われば色も替わります。
+・攻撃を受けている拠点には、ワールドマップと同じ攻撃マークを背後に表示します。
+・巻物とヴォレルドルングを今ある場所に、自分の位置をカメラの向きの矢印で表示します。
+・大きさ・ピンの大きさ・不透明度・表示位置・重なり順を設定できます。
+
+ゲームのワールドマップは借りず、地図のタイルとピンから自前で組み立てています。そのため
+ミニマップ系のアドオンと同時に使っても、互いの表示を奪い合いません。表示はシロディールに
+いるときだけで、メニューを開いている間は隠れます。
+
 ■ 色
 
 通知5種類それぞれの色を設定できます。初期状態では画面表示もチャット欄と同じ色を使うため、
@@ -230,6 +244,8 @@ in a corner.
 　/pbalert hud <通知> on | off      その通知を画面に出すか
 　/pbalert colour <通知> chat | hud <色名または RRGGBB>       色の変更
 　/pbalert colour follow on | off   画面表示にチャット欄の色を使うか
+　/pbalert map on | off             全体マップ
+　/pbalert map probe                全体マップが使っている値を表示
 　/pbalert board                    戦況をチャット欄に表示
 　/pbalert board on | off           戦況を画面に表示
 　/pbalert board front|normal|back  戦況表示の重なり順
@@ -388,6 +404,17 @@ alliance and how busy it is are what remain.
 Outside Cyrodiil, or with the watch switched off, it takes itself down: correct scores beside a
 frozen under-attack column is the worst of the three possible states.
 
+■ The whole of Cyrodiil (optional, off by default)
+
+An overview map in a corner: every keep, outpost, town, scroll temple and border keep in the
+game's own pin art for its owner, the attack burst behind any keep under attack, the scrolls and
+Volendrung where they are, and you, facing where the camera faces. Size, pin size, opacity,
+position and draw order are settings.
+
+It does not borrow the game's world map -- it is drawn from the map's own tiles and pins -- so it
+runs alongside a minimap add-on instead of taking the world map away from it. Cyrodiil only,
+and hidden whenever a menu is up.
+
 ■ Colours
 
 Every alert's colour can be set. By default the screen uses the chat colours, so there is one
@@ -441,6 +468,8 @@ Chat commands:
   /pbalert hud <alert> on | off     whether that alert appears on screen
   /pbalert colour <alert> chat | hud <name or RRGGBB>
   /pbalert colour follow on | off   whether the screen uses the chat colours
+  /pbalert map on | off             the overview map
+  /pbalert map probe                what the map is working with
   /pbalert board                    print the campaign summary in chat
   /pbalert board on | off           keep it on screen
   /pbalert board front|normal|back  where it sits in the stack

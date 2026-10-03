@@ -96,6 +96,19 @@ local function ApplyDrawOrder(window, token)
 	end))
 end
 
+addon.ApplyDrawOrder = ApplyDrawOrder
+
+-- For the overview map, which lives in its own file and positions itself with the same
+-- anchors and draw orders as everything else.
+function addon.AnchorFor(token)
+	local anchor = ANCHORS[token]
+	return anchor and anchor.point
+end
+
+function addon.IsDrawOrder(token)
+	return DRAW_ORDERS[token] ~= nil
+end
+
 -- The panel's list, in the order the positions read down the screen.
 addon.POSITIONS = {
 	{ token = "TOP", label = "SI_PBSCA_POS_TOP" },
