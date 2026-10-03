@@ -774,15 +774,26 @@ end
 -- QueryCampaignSelectionData, which is a request to the server -- the campaign browser fires
 -- one each time it opens.
 --
--- So it is asked for only when it is missing, and then at most once every few minutes. A
--- summary refreshed every five seconds must not become five seconds of server requests, and
--- an estimate in four buckets does not move fast enough to be worth one.
+-- So it is asked for every few minutes, and no more often. A summary refreshed every five
+-- seconds must not become five seconds of server requests, and an estimate in four buckets
+-- does not move fast enough to be worth one.
+--
+-- It used to be asked for only when it was MISSING. That left a hole: once the first answer
+-- was in, nothing asked again, and unless the server volunteered updates on its own -- which
+-- nothing says it does -- the summary went on showing the population from the moment the
+-- player rode in. Now it is refreshed on the same five-minute cadence whether it is there or
+-- not, but only while the summary is on screen: nothing is asked for on behalf of a display
+-- nobody is looking at. (Outside Cyrodiil the watch's timer is stopped, so nothing asks there
+-- either.) Printing the summary with /pbalert board is a direct question and may ask too.
 -- ---------------------------------------------------------------------------------------
 
 local POPULATION_QUERY_SECONDS = 300
 
-function addon:PopulationQuery()
+function addon:PopulationQuery(asked)
 	if not QueryCampaignSelectionData then
+		return
+	end
+	if not asked and not (self.sv and self.sv.board and self.sv.board.enabled) then
 		return
 	end
 	local now = Now()
@@ -806,6 +817,8 @@ function addon:Population()
 
 	for index = 1, (GetNumSelectionCampaigns() or 0) do
 		if GetSelectionCampaignId(index) == campaignId then
+			-- Present, but maybe old. Keep it fresh on the same cadence.
+			self:PopulationQuery()
 			local population = {}
 			for alliance = 1, (NUM_ALLIANCES or 3) do
 				population[alliance] = GetSelectionCampaignPopulationData(index, alliance)
@@ -1265,6 +1278,8 @@ function addon:SituationLines()
 end
 
 function addon:PrintSituation()
+	-- A direct question: allowed to ask the server even with the summary off screen.
+	self:PopulationQuery(true)
 	local lines = self:SituationLines()
 	if not lines then
 		Print(GetString(SI_PBSCA_BOARD_NO_DATA))
@@ -1964,6 +1979,15 @@ function addon:PrintStatus()
 	end
 
 	Print(GetString(SI_PBSCA_STATUS_BOARD), OnOff(self.sv.board.enabled))
+	-- The measurement for "is the population actually being refreshed": how long since the
+	-- client last received it, whoever asked.
+	if self.sv.board.enabled then
+		if self.lastPopulationUpdate then
+			Print(GetString(SI_PBSCA_STATUS_POPULATION_AGE), FormatElapsed(Now() - self.lastPopulationUpdate))
+		else
+			Print(GetString(SI_PBSCA_STATUS_POPULATION_UNKNOWN))
+		end
+	end
 	Print(GetString(SI_PBSCA_STATUS_MAP), OnOff(self.sv.map.enabled))
 	if self.sv.map.enabled and self.map.failed then
 		Print(GetString(SI_PBSCA_STATUS_MAP_FAILED))
@@ -2524,6 +2548,9 @@ local function OnAddOnLoaded(_, name)
 	-- browser makes when the player opens it.
 	if EVENT_CAMPAIGN_SELECTION_DATA_CHANGED then
 		em:RegisterForEvent(addon.name, EVENT_CAMPAIGN_SELECTION_DATA_CHANGED, function()
+			-- When the data actually arrived -- ours, or the campaign browser's -- which is what
+			-- "last updated" in the status means.
+			addon.lastPopulationUpdate = Now()
 			addon.board:Refresh()
 		end)
 	end

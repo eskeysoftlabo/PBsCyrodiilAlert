@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.5.1")
+check("version read from manifest", addon.version, "2.5.2")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.1"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.2"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -679,9 +679,39 @@ IsInGamepadPreferredMode = realMode
 Fire(EVENT_CAMPAIGN_SELECTION_DATA_CHANGED)
 check("and the keyboard art otherwise", BoardSaid("campaignBrowser_medPop.dds"), true)
 
+-- Known is not the same as current. It is asked for again every five minutes, so the summary
+-- does not go on showing the population from the moment the player rode in -- and no oftener.
 local answered = PopulationQueries
 Advance(600)
-check("nothing is asked for once it is known", PopulationQueries, answered)
+check("asked again every five minutes while it is up", PopulationQueries, answered + 2)
+Advance(60)
+check("and no oftener", PopulationQueries, answered + 2)
+
+-- Status says how old the last answer is, which is the measurement for whether it refreshes.
+Advance(130)
+Fire(EVENT_CAMPAIGN_SELECTION_DATA_CHANGED)
+Advance(125)
+ClearOutput()
+Slash("")
+check("the status says how old the population is", Said("population last updated 2:05 ago"), true)
+addon.lastPopulationUpdate = nil
+ClearOutput()
+Slash("")
+check("and says so when nothing has come in yet", Said("population not updated yet this session"), true)
+
+-- Nothing is asked for on behalf of a summary nobody is looking at.
+Slash("board off")
+local quiet = PopulationQueries
+Advance(900)
+check("the summary off, nothing is asked for", PopulationQueries, quiet)
+-- Printing it is a direct question, and may ask -- once, not on every line.
+addon.lastPopulationUpdate = nil
+addon.lastPopulationQuery = nil
+Slash("board")
+check("printing it asks, even with it off", PopulationQueries, quiet + 1)
+Slash("board")
+check("but not again straight away", PopulationQueries, quiet + 1)
+Slash("board on")
 SetSelectionData({})
 
 print("\n== 27. the summary is placed like the alerts ==")
@@ -1388,7 +1418,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.1")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.2")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

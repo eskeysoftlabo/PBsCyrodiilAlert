@@ -143,7 +143,8 @@ in a corner.
 人口は、シロディール入場時のキャンペーン選択画面に出るものと同じ推定値です（低・中・高・満杯の
 4段階で、**人数ではありません**。ゲームは実数を公開していません）。表示にはゲーム自身の
 キャンペーンブラウザのアイコンをそのまま使います（設定で文字表示にも切り替えられます）。サーバーへの問い合わせで
-得られるデータなので、不明なときだけ、最短5分間隔で取得します。それまでは「-」と表示します。
+得られるデータなので、戦況表示がオンの間、5分に1回だけ取得し直します。取得できるまでは
+「-」と表示します。
 
 ヴォレルドルングは出現している間だけ、所持している陣営を表示します（誰も持っていなければ
 「未所持」、自分が持っていればその旨）。**所持プレイヤーの名前は表示できません。**
@@ -379,7 +380,7 @@ want is one something else is already using. The typeface is shared with the ale
 The population is the campaign selection screen's own estimate -- Low, Medium, High, Full, not a
 headcount; the game publishes no player numbers. It is drawn as the game's own campaign-browser
 icon, with a setting to show the word instead. It arrives from a server request, so it is
-asked for only when missing and at most every five minutes, and reads "-" until then.
+refreshed every five minutes while the summary is up, and reads "-" until the first answer.
 
 Volendrung is listed while it is out, with the alliance holding it -- unclaimed if nobody does,
 and said plainly if it is you. **The player carrying it cannot be named:** the game does not

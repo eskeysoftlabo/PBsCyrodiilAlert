@@ -348,6 +348,8 @@ local strings = {
 	-- in one of its campaigns the alliance line is the alliance and how busy it is.
 	SI_PBSCA_BOARD_LINE_PLAIN = "%s%s",
 	SI_PBSCA_BOARD_ATTACKED = "  under attack %d",
+	SI_PBSCA_STATUS_POPULATION_AGE = "population last updated %s ago",
+	SI_PBSCA_STATUS_POPULATION_UNKNOWN = "population not updated yet this session",
 	SI_PBSCA_BOARD_POPULATION = "  pop %s",
 	SI_PBSCA_BOARD_MARK_MINE = "> ",
 	SI_PBSCA_BOARD_MARK_OTHER = "   ",

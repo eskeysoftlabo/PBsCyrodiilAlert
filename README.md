@@ -143,10 +143,12 @@ cannot produce the icon falls back to on its own, so the column is never blank.
 
 It comes from the campaign *selection* data, which is filled by a request to the server
 (`QueryCampaignSelectionData`, the same one the campaign browser makes each time it opens). So
-it is asked for only when it is missing, and then at most once every five minutes: a summary
-that refreshes every five seconds must not become five seconds of server requests, and a
-four-bucket estimate does not move fast enough to be worth one. Until an answer arrives the
-column reads `-`.
+it is asked for **every five minutes, and no more often**: a summary that refreshes every five
+seconds must not become five seconds of server requests, and a four-bucket estimate does not
+move fast enough to be worth one. It is asked for only while the summary is on screen (and, with
+the watch's timer stopped, never outside Cyrodiil); printing it with `/pbalert board` is a direct
+question and may ask too. Until an answer arrives the column reads `-`, and `/pbalert` says how
+long ago the last one came in.
 
 **Volendrung gets an alliance and no name.** Unlike the scrolls, the client is never told who
 carries the Daedric artifact: `EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_STATE_CHANGED` carries a
@@ -491,4 +493,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 405 checks.
+colours and every way it degrades are checked too. 411 checks.

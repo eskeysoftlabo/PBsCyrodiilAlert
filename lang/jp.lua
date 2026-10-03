@@ -345,6 +345,8 @@ local strings = {
 	-- 陣営行は「陣営名＋混雑度」だけになる。
 	SI_PBSCA_BOARD_LINE_PLAIN = "%s%s",
 	SI_PBSCA_BOARD_ATTACKED = "  攻撃中 %d",
+	SI_PBSCA_STATUS_POPULATION_AGE = "混雑度の最終更新: %s前",
+	SI_PBSCA_STATUS_POPULATION_UNKNOWN = "混雑度: このセッションではまだ更新されていません",
 	SI_PBSCA_BOARD_POPULATION = "  人口 %s",
 	SI_PBSCA_BOARD_MARK_MINE = "> ",
 	SI_PBSCA_BOARD_MARK_OTHER = "   ",
