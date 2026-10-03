@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.5.2")
+check("version read from manifest", addon.version, "2.5.3")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.2"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.3"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1284,6 +1284,52 @@ SetObjectives({})
 Advance(5)
 check("and gone when it is", addon.map.objectivePins[1].hidden, true)
 
+-- What a live client actually reports: every place the artifact CAN spawn is an objective of
+-- its own, twenty-three of them, each with a perfectly good neutral pin -- and at most one of
+-- them is in play. Drawing every objective with a pin is what put two dozen hammers on the map.
+ZO_MapPin.PIN_DATA[MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_NEUTRAL] =
+	{ texture = "EsoUI/Art/MapPins/AvA_daedricArtifact_volendrung_neutral.dds" }
+local spawnPoints = {}
+for point = 1, 23 do
+	spawnPoints[point] = {
+		keepId = 1000 + point, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+		name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_UNKNOWN,
+		pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_NEUTRAL,
+		enabled = false,
+	}
+end
+local function DrawnObjectives()
+	local drawn = 0
+	for _, pin in pairs(addon.map.objectivePins) do
+		if not pin.hidden then drawn = drawn + 1 end
+	end
+	return drawn
+end
+SetObjectives(spawnPoints)
+Advance(5)
+check("twenty-three spawn points, none in play: no hammer", DrawnObjectives(), 0)
+Slash("board on")
+Advance(5)
+check("and none on the summary either", BoardSaid("Volendrung"), false)
+
+-- One of them spawns and is revealed. One hammer, not twenty-three.
+spawnPoints[7].enabled = true
+spawnPoints[7].state = OBJECTIVE_CONTROL_STATE_FLAG_AT_BASE
+SetObjectives(spawnPoints)
+Advance(5)
+check("one spawn point in play: one hammer", DrawnObjectives(), 1)
+check("and one line on the summary", select(2, BoardText():gsub("Volendrung:", "")), 1)
+
+-- In play but the object not there to see (carried out of sight, say): the client puts no
+-- current-location pin down, and neither does this.
+spawnPoints[7].visible = false
+SetObjectives(spawnPoints)
+Advance(5)
+check("in play but not visible: not drawn", DrawnObjectives(), 0)
+Slash("board off")
+SetObjectives({})
+Advance(5)
+
 -- Over the game only. A menu up: hidden; back to the game: shown.
 CurrentScene = INVENTORY_SCENE
 Advance(1)
@@ -1418,7 +1464,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.2")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.3")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

@@ -90,6 +90,16 @@ function GetObjectiveInfo(keepId, objectiveId)
 	return o.name, o.objectiveType, o.state
 end
 function GetObjectivePinInfo(keepId, objectiveId) local o = FindObjective(keepId, objectiveId); return o and o.pinType end
+-- Every spawn point is an objective. Only an enabled one is in play, and only a visible one has
+-- the thing itself there. Both default to true, so a test has to say when they are not.
+function IsObjectiveEnabled(keepId, objectiveId)
+	local o = FindObjective(keepId, objectiveId)
+	return o ~= nil and o.enabled ~= false
+end
+function IsObjectiveObjectVisible(keepId, objectiveId)
+	local o = FindObjective(keepId, objectiveId)
+	return o ~= nil and o.visible ~= false
+end
 function IsCarryableObjectiveCarriedByLocalPlayer(keepId, objectiveId)
 	local o = FindObjective(keepId, objectiveId)
 	return o and o.mine or false
@@ -526,7 +536,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.2" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.3" end,
 	}
 end
 

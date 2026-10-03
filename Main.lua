@@ -1175,6 +1175,33 @@ local function ArtifactEnergyText()
 	return ""
 end
 
+-- Whether an objective is in play at all. Every place the artifact CAN spawn is an objective
+-- of its own -- twenty-three of them across Cyrodiil -- and each answers GetObjectivePinInfo
+-- with a perfectly good pin, whether or not anything is there. The client's own map only
+-- draws the ones that are enabled (mappin_manager.lua:677); without the same test the add-on
+-- drew every spawn point as an artifact.
+local function IsObjectiveInPlay(keepId, objectiveId, bgContext)
+	if IsObjectiveEnabled and not IsObjectiveEnabled(keepId, objectiveId, bgContext) then
+		return false
+	end
+	return true
+end
+
+-- And whether the thing itself is there to be drawn: the client's second test before it puts a
+-- current-location pin down (mappin_manager.lua:680, 706).
+local function IsObjectiveObjectShown(keepId, objectiveId, bgContext)
+	if not IsObjectiveInPlay(keepId, objectiveId, bgContext) then
+		return false
+	end
+	if IsObjectiveObjectVisible and not IsObjectiveObjectVisible(keepId, objectiveId, bgContext) then
+		return false
+	end
+	return true
+end
+
+addon.IsObjectiveInPlay = IsObjectiveInPlay
+addon.IsObjectiveObjectShown = IsObjectiveObjectShown
+
 -- Every Daedric artifact currently revealed in this campaign, or nil. An artifact that has not
 -- spawned reports OBJECTIVE_CONTROL_STATE_UNKNOWN and is left out: "not out yet" is not a state
 -- worth a line on a summary.
@@ -1188,7 +1215,8 @@ function addon:Artifacts()
 	for index = 1, (GetNumObjectives() or 0) do
 		local keepId, objectiveId, bgContext = GetObjectiveIdsForIndex(index)
 		if keepId and IsThisCampaign(bgContext)
-			and GetObjectiveType(keepId, objectiveId, bgContext) == OBJECTIVE_DAEDRIC_WEAPON then
+			and GetObjectiveType(keepId, objectiveId, bgContext) == OBJECTIVE_DAEDRIC_WEAPON
+			and IsObjectiveInPlay(keepId, objectiveId, bgContext) then
 			local name, _, state = GetObjectiveInfo(keepId, objectiveId, bgContext)
 			if state ~= OBJECTIVE_CONTROL_STATE_UNKNOWN then
 				local pinType = GetObjectivePinInfo(keepId, objectiveId, bgContext)

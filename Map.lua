@@ -430,10 +430,15 @@ function map:RefreshObjectives()
 	local count = 0
 	for index = 1, (GetNumObjectives() or 0) do
 		local keepId, objectiveId, bgContext = GetObjectiveIdsForIndex(index)
+		-- The client's own three tests, in its order (mappin_manager.lua:677-706): the objective
+		-- is enabled, the object is there to see, and the pin type is a real one. Every spawn
+		-- point of the artifact is an objective with a valid-looking pin, so leaving any of these
+		-- out draws two dozen hammers where there is one, or none.
 		if keepId and addon.IsThisCampaign(bgContext)
-			and SHOWN_OBJECTIVE[GetObjectiveType(keepId, objectiveId, bgContext)] then
+			and SHOWN_OBJECTIVE[GetObjectiveType(keepId, objectiveId, bgContext)]
+			and addon.IsObjectiveObjectShown(keepId, objectiveId, bgContext) then
 			local pinType, x, y = GetObjectivePinInfo(keepId, objectiveId, bgContext)
-			local texture = PinTexture(pinType, nil)
+			local texture = pinType ~= MAP_PIN_TYPE_INVALID and PinTexture(pinType, nil) or nil
 			local cx, cy = self:ToCyrodiil(x, y)
 			if texture and OnMap(cx, cy) then
 				count = count + 1
