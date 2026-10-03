@@ -524,7 +524,31 @@ function GetKeepPinInfo(keepId, bgContext)
 	return 200 + (alliance or 0), x, y
 end
 PlayerPlace = { 0.4, 0.6 }
+
+-- A group. group1 is us, as the client's group tags include the player. The rest: a leader, a
+-- member, one offline, and one somewhere that is not on the current map.
+GroupMembers = {}
+function SetGroup(list) GroupMembers = list or {} end
+local function Member(tag)
+	for _, member in ipairs(GroupMembers) do if member.tag == tag then return member end end
+end
+function GetGroupSize() return #GroupMembers end
+function GetGroupUnitTagByIndex(index) local member = GroupMembers[index]; return member and member.tag end
+function DoesUnitExist(tag) return tag == "player" or Member(tag) ~= nil end
+function AreUnitsEqual(a, b)
+	local function Me(tag) return tag == "player" or (Member(tag) and Member(tag).me) end
+	return a == b or (Me(a) and Me(b)) or false
+end
+function IsUnitOnline(tag) local member = Member(tag); return member ~= nil and member.online ~= false end
+function IsUnitGroupLeader(tag) local member = Member(tag); return member ~= nil and member.leader == true end
+
 function GetMapPlayerPosition(unitTag)
+	local member = Member(unitTag)
+	if member and not member.me then
+		if member.inMap == false then return 0, 0, 0, false, false end
+		local x, y = FromCyrodiil(member.place[1], member.place[2])
+		return x, y, 0, true, false
+	end
 	local x, y = FromCyrodiil(PlayerPlace[1], PlayerPlace[2])
 	return x, y, 0, true, false
 end
@@ -574,7 +598,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.6.3" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.7.0" end,
 	}
 end
 

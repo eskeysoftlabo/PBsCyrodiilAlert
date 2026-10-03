@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.6.3")
+check("version read from manifest", addon.version, "2.7.0")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 93)
+check("panel rows built", #PanelRows, 95)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.3"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.7.0"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1273,6 +1273,51 @@ Slash("map player on")
 Advance(4)
 check("and on again", addon.map.player.hidden, false)
 
+-- The rest of the group, as the world map pins them: not us, not offline, not off the map.
+SetGroup({
+	{ tag = "group1", me = true },
+	{ tag = "group2", place = { 0.6, 0.3 }, leader = true },
+	{ tag = "group3", place = { 0.2, 0.8 } },
+	{ tag = "group4", place = { 0.5, 0.5 }, online = false },
+	{ tag = "group5", place = { 0.5, 0.5 }, inMap = false },
+})
+Advance(1)
+local function ShownGroup()
+	local shown = {}
+	for _, pin in ipairs(addon.map.groupPins) do
+		if not pin.hidden then shown[#shown + 1] = pin end
+	end
+	return shown
+end
+local members = ShownGroup()
+check("two members drawn: not us, not offline, not off the map", #members, 2)
+check("the leader with the crown", members[1].texture, "EsoUI/Art/Compass/groupLeader.dds")
+check("where the leader is", near(members[1].anchors[1].x), 180)
+check("both ways", near(members[1].anchors[1].y), 90)
+check("a member with the group pip", members[2].texture, "EsoUI/Art/MapPins/UI-WorldMapGroupPip.dds")
+check("under our own arrow", members[1].drawLevel < addon.map.player.drawLevel, true)
+check("at the group size", members[1].width, 10)
+PanelRow("Group pin size").setFunction(7)
+check("which has its own setting", members[1].width, 7)
+PanelRow("Group pin size").setFunction(10)
+-- A member who walks off moves with them; one who leaves goes.
+GroupMembers[3].place = { 0.25, 0.75 }
+Advance(1)
+check("a member is followed", near(ShownGroup()[2].anchors[1].x), 75)
+table.remove(GroupMembers, 3)
+Advance(1)
+check("and one who leaves is dropped", #ShownGroup(), 1)
+Slash("map group off")
+Advance(1)
+check("the group can be switched off", #ShownGroup(), 0)
+Slash("map group on")
+Advance(4)
+check("and on again", #ShownGroup(), 1)
+-- No group: nothing asked.
+SetGroup({})
+Advance(1)
+check("no group, no pins", #ShownGroup(), 0)
+
 -- The world map showing a city instead. Every pin function now answers in the city's
 -- coordinates; converted, they must land exactly where they did.
 CurrentMapId = CITY_MAP_ID
@@ -1445,6 +1490,8 @@ SetObjectives({
 	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
 	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD, pinType = 202 },
 })
+-- A group, so their positions are among the reads that must not happen on Tamriel.
+SetGroup({ { tag = "group1", me = true }, { tag = "group2", place = { 0.6, 0.3 }, leader = true } })
 CountMapReads()
 Slash("map on")
 Advance(4)
@@ -1508,6 +1555,7 @@ check("a pass during the map reads nothing", MapReads, 0)
 CurrentScene = HUD_SCENE
 CurrentMapId = CYRODIIL_MAP_ID
 SetObjectives({})
+SetGroup({})
 Slash("map off")
 
 print("\n== 39. every surface can reach the whole screen ==")
@@ -1599,7 +1647,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.3")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.7.0")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

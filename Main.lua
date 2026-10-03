@@ -502,6 +502,9 @@ local DEFAULTS = {
 		-- Your own arrow, and how big it is. Smaller than a keep, as on the world map.
 		player = true,
 		playerSize = 10,
+		-- The rest of the group.
+		group = true,
+		groupSize = 10,
 	},
 	-- The campaign summary. Its own switch, its own size and its own corner; the typeface and
 	-- outline come from the alert display, because two on-screen texts from one add-on in two
@@ -2110,6 +2113,7 @@ function addon:PrintHelp()
 	Line(GetString(SI_PBSCA_HELP_MAP_LINKS))
 	Line(GetString(SI_PBSCA_HELP_MAP_RESOURCES))
 	Line(GetString(SI_PBSCA_HELP_MAP_PLAYER))
+	Line(GetString(SI_PBSCA_HELP_MAP_GROUP))
 	Line(GetString(SI_PBSCA_HELP_MAP_PROBE))
 	Line(GetString(SI_PBSCA_HELP_BOARD))
 	Line(GetString(SI_PBSCA_HELP_BOARD_DRAW))
@@ -2264,6 +2268,20 @@ function addon:HandleCommand(argumentString)
 			end
 			return
 		end
+		-- "map group on|off" -- the rest of the group.
+		if second == "group" or second == "party" then
+			local value = ParseSwitch(words[3] or "")
+			if value == nil then
+				Print(GetString(SI_PBSCA_ERROR_ON_OR_OFF))
+				return
+			end
+			self.sv.map.group = value
+			self.map:Refresh()
+			self:RefreshPanel()
+			Print(GetString(SI_PBSCA_MAP_GROUP) .. ": " .. OnOff(value))
+			return
+		end
+
 		-- "map player on|off" -- your own arrow.
 		if second == "player" or second == "me" then
 			local value = ParseSwitch(words[3] or "")

@@ -85,6 +85,12 @@ local LINK_TEXTURE_IN_COMBAT = "EsoUI/Art/AvA/AvA_transitLine_dashed.dds"
 local LINK_ALPHA_OWNED, LINK_ALPHA_UNOWNED = 0.8, 0.2
 
 local PLAYER_TEXTURE = "EsoUI/Art/MapPins/UI-WorldMapPlayerPip.dds"
+
+-- The group's pins. The world map picks these through a file-local table (mappin.lua:2408), so
+-- they are written out here; the leader gets the compass's leader crown, everyone else the
+-- map's group pip.
+local GROUP_TEXTURE = "EsoUI/Art/MapPins/UI-WorldMapGroupPip.dds"
+local GROUP_LEADER_TEXTURE = "EsoUI/Art/Compass/groupLeader.dds"
 local ATTACK_TEXTURE = "EsoUI/Art/MapPins/AvA_attackBurst_64.dds"
 
 -- The game's own pin art, read out of its pin table. Only a plain string is used: some entries
@@ -132,6 +138,10 @@ end
 -- mappin.lua) and covered the keep you were standing at.
 function map:PlayerSize()
 	return Clamp(Settings().playerSize, addon.MIN_MAP_PLAYER, addon.MAX_MAP_PLAYER) or addon.DEFAULTS.map.playerSize
+end
+
+function map:GroupSize()
+	return Clamp(Settings().groupSize, addon.MIN_MAP_PLAYER, addon.MAX_MAP_PLAYER) or addon.DEFAULTS.map.groupSize
 end
 
 function map:Opacity()
@@ -321,6 +331,7 @@ end
 -- ---------------------------------------------------------------------------------------
 
 map.keepPins = {}
+map.groupPins = {}
 map.links = {}
 map.linkPositions = {}
 map.objectivePins = {}
@@ -413,6 +424,10 @@ function map:Apply()
 	local pin = self:PinSize()
 	local playerSize = self:PlayerSize()
 	self.player:SetDimensions(playerSize, playerSize)
+	local groupSize = self:GroupSize()
+	for _, member in ipairs(self.groupPins) do
+		member:SetDimensions(groupSize, groupSize)
+	end
 	for _, keep in pairs(self.keepPins) do
 		keep.icon:SetDimensions(pin * keep.scale, pin * keep.scale)
 		keep.burst:SetDimensions(pin * keep.scale * 1.6, pin * keep.scale * 1.6)
@@ -678,6 +693,45 @@ function map:RefreshPlayer()
 	self.player:SetHidden(false)
 end
 
+-- The rest of the group, by the same tests the world map makes before it pins a member
+-- (mappin_manager.lua:737): the unit exists, is not us, is online, and GetMapPlayerPosition
+-- says it is on the current map. Behind the same gate as everything else that reads the
+-- current map, and only while there is a group at all.
+function map:RefreshGroup()
+	local shown = Settings().group ~= false
+	local size = (shown and GetGroupSize and GetGroupUnitTagByIndex) and (GetGroupSize() or 0) or 0
+	local count = 0
+	if size > 0 and self:MapReadsAllowed() then
+		for index = 1, size do
+			local tag = GetGroupUnitTagByIndex(index)
+			if tag and (not DoesUnitExist or DoesUnitExist(tag))
+				and not (AreUnitsEqual and AreUnitsEqual("player", tag))
+				and (not IsUnitOnline or IsUnitOnline(tag)) then
+				local x, y, _, isInCurrentMap = GetMapPlayerPosition(tag)
+				local cx, cy = self:ToCyrodiil(x, y)
+				if isInCurrentMap ~= false and OnMap(cx, cy) then
+					count = count + 1
+					local pin = self.groupPins[count]
+					if not pin then
+						-- Under our own arrow, over everything else.
+						pin = NewTexture(WINDOW_NAME .. "Group" .. count, self.window, 8)
+						local groupSize = self:GroupSize()
+						pin:SetDimensions(groupSize, groupSize)
+						self.groupPins[count] = pin
+					end
+					local leader = IsUnitGroupLeader and IsUnitGroupLeader(tag)
+					pin:SetTexture(leader and GROUP_LEADER_TEXTURE or GROUP_TEXTURE)
+					Place(pin, self.window, self:Size(), cx, cy)
+					pin:SetHidden(false)
+				end
+			end
+		end
+	end
+	for index = count + 1, #self.groupPins do
+		self.groupPins[index]:SetHidden(true)
+	end
+end
+
 -- ---------------------------------------------------------------------------------------
 -- Showing and hiding
 -- ---------------------------------------------------------------------------------------
@@ -720,6 +774,7 @@ function map:Tick()
 		self:RefreshKeeps()
 	end
 	self:RefreshPlayer()
+	self:RefreshGroup()
 end
 
 function map:Refresh(zoned)
@@ -741,6 +796,7 @@ function map:Refresh(zoned)
 	self.window:SetHidden(not self:IsHudShowing())
 	self:RefreshKeeps()
 	self:RefreshPlayer()
+	self:RefreshGroup()
 	self:StartTick()
 end
 

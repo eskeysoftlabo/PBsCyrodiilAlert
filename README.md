@@ -223,6 +223,8 @@ An overview map, on its own switch, sized and placed like everything else:
 - the transitus network, drawn as the world map draws it away from a shrine — each link in its
   owner's colour, faint when nobody holds it, dashed while fighting has cut it (`/pbalert map
   links off` to hide it);
+- the rest of your group where they are, the leader with the crown — the members the world map
+  itself would pin: online and on the current map (`/pbalert map group off`);
 - you, as the world map's arrow, turned the way the camera faces — on its own switch and its own
   size, smaller than a keep as on the world map (`/pbalert map player off`).
 
@@ -511,4 +513,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 463 checks.
+colours and every way it degrades are checked too. 476 checks.

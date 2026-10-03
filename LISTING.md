@@ -181,7 +181,8 @@ in a corner.
 ・砦・前哨・村・巻物神殿・国境砦と、その周りの資源（農場・鉱山・製材所）を、ゲーム自身のピンの絵で所有陣営の色に表示します。
 　持ち主が替われば色も替わります。
 ・攻撃を受けている拠点には、ワールドマップと同じ攻撃マークを背後に表示します。
-・巻物とヴォレルドルングを今ある場所に、自分の位置をカメラの向きの矢印で表示します。
+・巻物とヴォレルドルングを今ある場所に、パーティーメンバーを（リーダーは王冠で）、自分の位置を
+　カメラの向きの矢印で表示します。
 ・トランシタスの経路を、ワールドマップと同じく所有陣営の色で、戦闘で寸断されている間は破線で
 　表示します（設定で非表示にもできます）。
 ・大きさ・ピンの大きさ・不透明度・表示位置・重なり順を設定できます。
@@ -251,6 +252,7 @@ in a corner.
 　/pbalert map links on | off       全体マップのトランシタス経路
 　/pbalert map resources on | off   全体マップの資源
 　/pbalert map player on | off      全体マップの自分の位置
+　/pbalert map group on | off       全体マップのパーティーメンバー
 　/pbalert map probe                全体マップが使っている値を表示
 　/pbalert board                    戦況をチャット欄に表示
 　/pbalert board on | off           戦況を画面に表示
@@ -479,6 +481,7 @@ Chat commands:
   /pbalert map links on | off       the transitus network on the map
   /pbalert map resources on | off   the resources on the map
   /pbalert map player on | off      your own arrow on the map
+  /pbalert map group on | off       your group on the map
   /pbalert map probe                what the map is working with
   /pbalert board                    print the campaign summary in chat
   /pbalert board on | off           keep it on screen
