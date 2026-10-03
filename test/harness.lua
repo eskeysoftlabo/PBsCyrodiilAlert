@@ -378,7 +378,7 @@ TOPLEFT, TOPRIGHT, BOTTOMLEFT, BOTTOMRIGHT = "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT"
 TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT = "left", "centre", "right"
 TEXT_ALIGN_TOP, TEXT_ALIGN_BOTTOM = "top", "bottom"
 TEXT_WRAP_MODE_ELLIPSIS, TEXT_WRAP_MODE_TRUNCATE = "ellipsis", "truncate"
-CT_LABEL, CT_BACKDROP, CT_TEXTURE = "label", "backdrop", "texture"
+CT_LABEL, CT_BACKDROP, CT_TEXTURE, CT_LINE = "label", "backdrop", "texture", "line"
 DL_OVERLAY, DL_CONTROLS, DL_BACKGROUND = "overlay", "controls", "background"
 DT_HIGH, DT_MEDIUM, DT_LOW = "high", "medium", "low"
 
@@ -411,6 +411,7 @@ local function NewControl(name)
 	function control:SetHorizontalAlignment(align) self.horizontal = align end
 	function control:SetVerticalAlignment(align) self.vertical = align end
 	function control:SetTexture(path) self.texture = path end
+	function control:SetThickness(thickness) self.thickness = thickness end
 	function control:SetTextureRotation(angle) self.rotation = angle end
 	function control:SetDrawLevel(level) self.drawLevel = level end
 	function control:SetAlpha(alpha) self.alpha = alpha end
@@ -525,6 +526,24 @@ function GetMapPlayerPosition(unitTag)
 end
 function GetPlayerCameraHeading() return 1.25 end
 
+-- The transitus network. Links between keeps, by keep id, answered in the current map's
+-- coordinates like every other pin function.
+FAST_TRAVEL_LINK_ACTIVE, FAST_TRAVEL_LINK_INACTIVE, FAST_TRAVEL_LINK_IN_COMBAT = 1, 2, 3
+TransitLinks = {
+	{ from = 11, to = 20, type = 1, owner = ALLIANCE_EBONHEART_PACT },
+	{ from = 12, to = 20, type = 3, owner = ALLIANCE_ALDMERI_DOMINION },
+	{ from = 11, to = 12, type = 1, owner = ALLIANCE_NONE },
+}
+TransitQueried = {}
+function GetNumKeepTravelNetworkLinks(bgContext) TransitQueried[#TransitQueried + 1] = bgContext; return #TransitLinks end
+function GetKeepTravelNetworkLinkInfo(index, bgContext)
+	local link = TransitLinks[index]
+	local a, b = KeepPlaces[link.from], KeepPlaces[link.to]
+	local ax, ay = FromCyrodiil(a[1], a[2])
+	local bx, by = FromCyrodiil(b[1], b[2])
+	return link.type, link.owner, ALLIANCE_NONE, ax, ay, bx, by
+end
+
 -- Scenes: read, never touched.
 HUD_SCENE, HUD_UI_SCENE = { name = "hud" }, { name = "hudui" }
 SIEGE_BAR_SCENE, SIEGE_BAR_UI_SCENE = { name = "siegeBar" }, { name = "siegeBarUI" }
@@ -536,7 +555,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.5.3" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.6.0" end,
 	}
 end
 

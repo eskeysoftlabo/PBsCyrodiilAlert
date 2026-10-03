@@ -220,6 +220,9 @@ An overview map, on its own switch, sized and placed like everything else:
 - the Elder Scrolls and Volendrung where they are — only the ones actually in play, by the same
   three tests the game's own map makes (every place Volendrung *can* spawn is an objective of its
   own, twenty-three of them, each with a valid-looking pin);
+- the transitus network, drawn as the world map draws it away from a shrine — each link in its
+  owner's colour, faint when nobody holds it, dashed while fighting has cut it (`/pbalert map
+  links off` to hide it);
 - you, as the world map's arrow, turned the way the camera faces.
 
 Resources are left off: at this scale there are three crowded against every keep.
@@ -247,6 +250,7 @@ anywhere else, nothing about it runs.
 
 ```
 /pbalert map on | off
+/pbalert map links on | off
 /pbalert map probe
 ```
 
@@ -495,4 +499,4 @@ cannot be arranged on demand in a real campaign (a siege lasting past the repeat
 that flips while it is being hit) are played out in milliseconds. It also stubs the window
 manager, so what reaches the screen — which lines, in what colours, in what font, anchored
 where, and when they expire — and the campaign APIs, so the summary's numbers, ordering,
-colours and every way it degrades are checked too. 416 checks.
+colours and every way it degrades are checked too. 434 checks.

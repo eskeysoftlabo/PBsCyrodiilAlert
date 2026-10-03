@@ -68,6 +68,13 @@ DeclareShownObjective(OBJECTIVE_ARTIFACT_OFFENSIVE)
 DeclareShownObjective(OBJECTIVE_ARTIFACT_DEFENSIVE)
 DeclareShownObjective(OBJECTIVE_DAEDRIC_WEAPON)
 
+-- The transitus network, drawn the way the world map draws it when you are not standing at a
+-- shrine (worldmap.lua:520-580): each link in its owner's colour, faint when nobody owns it,
+-- and dashed while it is cut by fighting. Same two textures.
+local LINK_TEXTURE = "EsoUI/Art/AvA/AvA_transitLine.dds"
+local LINK_TEXTURE_IN_COMBAT = "EsoUI/Art/AvA/AvA_transitLine_dashed.dds"
+local LINK_ALPHA_OWNED, LINK_ALPHA_UNOWNED = 0.8, 0.2
+
 local PLAYER_TEXTURE = "EsoUI/Art/MapPins/UI-WorldMapPlayerPip.dds"
 local ATTACK_TEXTURE = "EsoUI/Art/MapPins/AvA_attackBurst_64.dds"
 
@@ -236,6 +243,8 @@ end
 -- ---------------------------------------------------------------------------------------
 
 map.keepPins = {}
+map.links = {}
+map.linkPositions = {}
 map.objectivePins = {}
 map.keepPositions = {}
 
@@ -315,6 +324,12 @@ function map:Apply()
 		tile:ClearAnchors()
 		tile:SetAnchor(TOPLEFT, self.window, TOPLEFT,
 			((index - 1) % self.across) * tileWidth, math.floor((index - 1) / self.across) * tileHeight)
+	end
+
+	for _, link in pairs(self.links) do
+		if link.SetThickness then
+			link:SetThickness(self:LinkThickness())
+		end
 	end
 
 	local pin = self:PinSize()
@@ -418,6 +433,87 @@ function map:RefreshKeeps()
 		end
 	end
 	self:RefreshObjectives()
+	self:RefreshLinks()
+end
+
+-- ---------------------------------------------------------------------------------------
+-- The transitus network
+-- ---------------------------------------------------------------------------------------
+
+-- The world map draws its links 8 thick on a map thousands of units across; at a few hundred
+-- that would be a ribbon. Scaled to the map instead, with a floor so a small map keeps a line.
+function map:LinkThickness()
+	return math.max(1.5, self:Size() * 0.008)
+end
+
+local function HexToRgb(hex)
+	hex = hex or "FFFFFF"
+	return tonumber(hex:sub(1, 2), 16) / 255, tonumber(hex:sub(3, 4), 16) / 255, tonumber(hex:sub(5, 6), 16) / 255
+end
+
+function map:LinkControl(index)
+	local link = self.links[index]
+	if link then
+		return link
+	end
+	-- A Line control, as the world map's ZO_MapKeepLink is (worldmap.xml:19). Under the keeps,
+	-- over the tiles.
+	link = WINDOW_MANAGER:CreateControl(WINDOW_NAME .. "Link" .. index, self.window, CT_LINE)
+	link:SetMouseEnabled(false)
+	if link.SetDrawLevel then
+		link:SetDrawLevel(2)
+	end
+	if link.SetThickness then
+		link:SetThickness(self:LinkThickness())
+	end
+	self.links[index] = link
+	return link
+end
+
+function map:RefreshLinks()
+	local shown = Settings().links ~= false
+	if not (shown and CT_LINE and GetNumKeepTravelNetworkLinks and GetKeepTravelNetworkLinkInfo) then
+		for _, link in pairs(self.links) do
+			link:SetHidden(true)
+		end
+		return
+	end
+
+	-- The campaign in front of us: the same bgContext the keep watch uses.
+	local bgContext = BGQUERY_LOCAL
+	local count = GetNumKeepTravelNetworkLinks(bgContext) or 0
+	local size = self:Size()
+	for index = 1, count do
+		local linkType, owner, _, startX, startY, endX, endY = GetKeepTravelNetworkLinkInfo(index, bgContext)
+		local ax, ay = self:ToCyrodiil(startX, startY)
+		local bx, by = self:ToCyrodiil(endX, endY)
+		-- Links do not move either: a position that converts is kept, and one that does not
+		-- leaves the last good one standing.
+		if OnMap(ax, ay) and OnMap(bx, by) then
+			self.linkPositions[index] = { ax = ax, ay = ay, bx = bx, by = by }
+		end
+		local position = self.linkPositions[index]
+		local link = self:LinkControl(index)
+		if position then
+			-- A line is laid from its TOPLEFT anchor to its BOTTOMRIGHT one, whichever way that
+			-- runs -- the world map's own ZO_Anchor_LineInContainer, written out here rather
+			-- than called.
+			link:ClearAnchors()
+			link:SetAnchor(TOPLEFT, self.window, TOPLEFT, position.ax * size, position.ay * size)
+			link:SetAnchor(BOTTOMRIGHT, self.window, TOPLEFT, position.bx * size, position.by * size)
+			local inCombat = FAST_TRAVEL_LINK_IN_COMBAT ~= nil and linkType == FAST_TRAVEL_LINK_IN_COMBAT
+			link:SetTexture(inCombat and LINK_TEXTURE_IN_COMBAT or LINK_TEXTURE)
+			local r, g, b = HexToRgb(addon.AllianceHex(owner))
+			local owned = owner ~= nil and owner ~= ALLIANCE_NONE
+			link:SetColor(r, g, b, owned and LINK_ALPHA_OWNED or LINK_ALPHA_UNOWNED)
+			link:SetHidden(false)
+		else
+			link:SetHidden(true)
+		end
+	end
+	for index = count + 1, #self.links do
+		self.links[index]:SetHidden(true)
+	end
 end
 
 function map:RefreshObjectives()

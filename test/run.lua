@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.5.3")
+check("version read from manifest", addon.version, "2.6.0")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 89)
+check("panel rows built", #PanelRows, 90)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.5.3"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.0"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1260,6 +1260,33 @@ check("an unknown map leaves keeps where they were", near(chalman.icon.anchors[1
 check("and hides the player rather than guess", addon.map.player.hidden, true)
 CurrentMapId = CYRODIIL_MAP_ID
 
+-- The transitus network, as the world map draws it away from a shrine.
+local road = addon.map.links[1]
+check("a link is drawn", road ~= nil and road.hidden, false)
+check("from one keep", near(road.anchors[1].x), 75)
+check("at its place", near(road.anchors[1].y), 150)
+check("to the other", near(road.anchors[2].x), 150)
+check("both ways", near(road.anchors[2].y), 225)
+check("laid TOPLEFT to BOTTOMRIGHT, as the world map lays a line", road.anchors[2].point, BOTTOMRIGHT)
+check("in its owner's colour", string.format("%.3f", road.colour[1]), string.format("%.3f", 0xE2 / 255))
+check("solid while it can be used", road.texture, "EsoUI/Art/AvA/AvA_transitLine.dds")
+check("at the owned alpha", road.colour[4], 0.8)
+check("dashed while fighting cuts it", addon.map.links[2].texture, "EsoUI/Art/AvA/AvA_transitLine_dashed.dds")
+check("faint when nobody holds it", addon.map.links[3].colour[4], 0.2)
+check("under the keeps", road.drawLevel < chalman.icon.drawLevel, true)
+check("over the tiles", road.drawLevel > addon.map.tiles[1].drawLevel, true)
+check("read for the campaign in front of us", TransitQueried[#TransitQueried], BGQUERY_LOCAL)
+check("thin at this size, not the world map's ribbon", road.thickness < 8, true)
+-- The world map on a city: the links stay put, like the keeps.
+CurrentMapId = CITY_MAP_ID
+Advance(5)
+check("a city on the world map moves no link", near(road.anchors[2].y), 225)
+CurrentMapId = CYRODIIL_MAP_ID
+Slash("map links off")
+check("and they can be switched off", road.hidden, true)
+Slash("map links on")
+check("and on again", road.hidden, false)
+
 -- A pin type whose art is a function is not called and not substituted.
 ZO_MapPin.PIN_DATA[202].texture = function() error("client code was called") end
 Advance(5)
@@ -1464,7 +1491,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.5.3")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.0")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

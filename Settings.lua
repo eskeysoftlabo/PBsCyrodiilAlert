@@ -682,6 +682,22 @@ function addon:InitSettings()
 		)
 	end
 
+	settings:AddSetting(
+		{
+			type = LibHarvensAddonSettings.ST_CHECKBOX,
+			label = GetString(SI_PBSCA_MAP_LINKS),
+			tooltip = GetString(SI_PBSCA_MAP_LINKS_TOOLTIP),
+			default = self.DEFAULTS.map.links,
+			getFunction = function()
+				return self.sv.map.links ~= false
+			end,
+			setFunction = function(value)
+				self.sv.map.links = value
+				self.map:Refresh()
+			end
+		}
+	)
+
 	AddMapSlider("SI_PBSCA_MAP_SIZE", "SI_PBSCA_MAP_SIZE_TOOLTIP", "size",
 		self.MIN_MAP_SIZE, self.MAX_MAP_SIZE, 10, GetString(SI_PBSCA_UNIT_PIXELS))
 	AddMapSlider("SI_PBSCA_MAP_PIN", "SI_PBSCA_MAP_PIN_TOOLTIP", "pinSize",

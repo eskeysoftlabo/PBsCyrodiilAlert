@@ -495,6 +495,8 @@ local DEFAULTS = {
 		offsetX = -24,
 		offsetY = 220,
 		draw = "FRONT",
+		-- The transitus network, as the world map shows it.
+		links = true,
 	},
 	-- The campaign summary. Its own switch, its own size and its own corner; the typeface and
 	-- outline come from the alert display, because two on-screen texts from one add-on in two
@@ -2099,6 +2101,7 @@ function addon:PrintHelp()
 	Line(GetString(SI_PBSCA_HELP_LOG_DRAW))
 	Line(GetString(SI_PBSCA_HELP_LOG_CLEAR))
 	Line(GetString(SI_PBSCA_HELP_MAP))
+	Line(GetString(SI_PBSCA_HELP_MAP_LINKS))
 	Line(GetString(SI_PBSCA_HELP_MAP_PROBE))
 	Line(GetString(SI_PBSCA_HELP_BOARD))
 	Line(GetString(SI_PBSCA_HELP_BOARD_DRAW))
@@ -2251,6 +2254,19 @@ function addon:HandleCommand(argumentString)
 			for _, line in ipairs(self.map:Probe()) do
 				Print("%s", line)
 			end
+			return
+		end
+		-- "map links on|off" -- the transitus network.
+		if second == "links" or second == "transitus" then
+			local value = ParseSwitch(words[3] or "")
+			if value == nil then
+				Print(GetString(SI_PBSCA_ERROR_ON_OR_OFF))
+				return
+			end
+			self.sv.map.links = value
+			self.map:Refresh()
+			self:RefreshPanel()
+			Print(GetString(SI_PBSCA_MAP_LINKS) .. ": " .. OnOff(value))
 			return
 		end
 		local value = ParseSwitch(second)
