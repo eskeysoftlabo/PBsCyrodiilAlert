@@ -475,11 +475,15 @@ end
 -- CURRENT map's coordinates, as the client's do, so the overview map's conversion is what the
 -- tests exercise -- a build that forgot it would draw every pin in the wrong place while the
 -- world map shows the city.
-CYRODIIL_MAP_ID, CITY_MAP_ID = 16, 99
+CYRODIIL_MAP_ID, CITY_MAP_ID, TAMRIEL_MAP_ID, OTHER_ZONE_MAP_ID = 16, 99, 27, 41
 CurrentMapId = CYRODIIL_MAP_ID
 local UNIVERSAL = {
 	[CYRODIIL_MAP_ID] = { 0.5, 0.4, 0.2, 0.2 },
 	[CITY_MAP_ID] = { 0.55, 0.42, 0.02, 0.02 },
+	-- All of Tamriel: contains Cyrodiil, is not inside it.
+	[TAMRIEL_MAP_ID] = { 0, 0, 1, 1 },
+	-- Another zone altogether.
+	[OTHER_ZONE_MAP_ID] = { 0.1, 0.1, 0.2, 0.2 },
 }
 function GetCyrodiilMapIndex() return 14 end
 function GetMapIdByIndex(index) return index == 14 and CYRODIIL_MAP_ID or 0 end
@@ -526,6 +530,21 @@ function GetMapPlayerPosition(unitTag)
 end
 function GetPlayerCameraHeading() return 1.25 end
 
+-- Every call that answers in terms of the current map, counted. With the world map on Tamriel
+-- these are what the console bills to the shared add-on pool; the add-on must make none.
+MapReads = 0
+function CountMapReads()
+	for _, name in ipairs({ "GetKeepPinInfo", "GetMapPlayerPosition", "GetObjectivePinInfo", "GetKeepTravelNetworkLinkInfo" }) do
+		local real = _G[name]
+		_G[name] = function(...)
+			MapReads = MapReads + 1
+			return real(...)
+		end
+	end
+end
+GetTotalUserAddOnMemoryPoolUsageMB = function() return 41.5 end
+GetTotalUserAddOnMemoryPoolCapacityMB = function() return 100 end
+
 -- The transitus network. Links between keeps, by keep id, answered in the current map's
 -- coordinates like every other pin function.
 FAST_TRAVEL_LINK_ACTIVE, FAST_TRAVEL_LINK_INACTIVE, FAST_TRAVEL_LINK_IN_COMBAT = 1, 2, 3
@@ -555,7 +574,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.6.0" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.6.1" end,
 	}
 end
 

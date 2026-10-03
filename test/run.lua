@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.6.0")
+check("version read from manifest", addon.version, "2.6.1")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.0"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.6.1"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -1218,6 +1218,10 @@ check("tile 4 opens the second row", near(addon.map.tiles[4].anchors[1].x), 0)
 check("a third of the way down", near(addon.map.tiles[4].anchors[1].y), 100)
 check("square, at the default size", window.width, 300)
 
+-- Nothing about the current map is read until the HUD has been up for a few ticks.
+check("no keep read before the HUD has settled", addon.map.keepPins[11], nil)
+Advance(3)
+
 -- Keeps land where they are on Cyrodiil, in their owner's art.
 local chalman = addon.map.keepPins[11]
 check("a keep is pinned", chalman ~= nil, true)
@@ -1396,13 +1400,93 @@ check("back on the way in", window.hidden, false)
 ClearOutput()
 Slash("map probe")
 check("the probe says what it is working with", Said("cyrodiil=16"), true)
-check("and where it thinks the player is", Said("player:"), true)
+check("and whether it may read the current map", Said("map reads allowed: false"), true)
+Advance(3)
+ClearOutput()
+Slash("map probe")
+check("once settled, where it thinks the player is", Said("player:"), true)
+check("and the add-on memory pool", Said("add-on memory pool:"), true)
 
 Slash("map off")
 check("off is off", window.hidden, true)
 check("and nothing ticking", UpdateRunning("PBsCyrodiilAlertMapTick"), false)
 
-print("\n== 38. every surface can reach the whole screen ==")
+print("\n== 38. the overview map never reads Tamriel ==")
+-- On a console, what the client allocates while an add-on's function is on the stack is billed
+-- to the shared add-on pool, and the world map pulled back to all of Tamriel fills it in a
+-- frame. The map must make no call that answers in terms of the current map unless that map
+-- is Cyrodiil or inside it, the HUD is up, and the HUD has settled.
+ResetWorld()
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD, pinType = 202 },
+})
+CountMapReads()
+Slash("map on")
+Advance(4)
+local keep = addon.map.keepPins[11]
+check("on Cyrodiil it reads", MapReads > 0, true)
+
+-- A shrine, or the map, opened and pulled back to Tamriel.
+CurrentScene = INVENTORY_SCENE
+CurrentMapId = TAMRIEL_MAP_ID
+MapReads = 0
+Advance(30)
+check("with the world map up: not one read in thirty seconds", MapReads, 0)
+
+-- The world map closed, but still on Tamriel: the HUD is up and settled, and still nothing.
+CurrentScene = HUD_SCENE
+MapReads = 0
+Advance(30)
+check("the HUD back but the map still on Tamriel: not one read", MapReads, 0)
+check("the arrow hidden rather than guessed", addon.map.player.hidden, true)
+check("the keeps stay where they were", keep.icon.hidden, false)
+-- The bursts depend on no map, so they stay live.
+SetKeep(CHALMAN, { attacked = true })
+Advance(5)
+check("an attack still shows", keep.burst.hidden, false)
+SetKeep(CHALMAN, { attacked = false })
+Advance(5)
+check("and clears", keep.burst.hidden, true)
+
+-- Another zone's map is no better.
+CurrentMapId = OTHER_ZONE_MAP_ID
+MapReads = 0
+Advance(10)
+check("another zone's map: not one read", MapReads, 0)
+
+-- Back on Cyrodiil: reads resume, but only after the HUD has settled.
+CurrentMapId = CYRODIIL_MAP_ID
+CurrentScene = INVENTORY_SCENE
+Advance(1)
+CurrentScene = HUD_SCENE
+MapReads = 0
+Advance(2)
+check("not in the first ticks back", MapReads, 0)
+Advance(2)
+check("then it reads again", MapReads > 0, true)
+check("and the arrow comes back", addon.map.player.hidden, false)
+
+-- A city inside Cyrodiil is Cyrodiil enough.
+CurrentMapId = CITY_MAP_ID
+MapReads = 0
+Advance(2)
+check("a map inside Cyrodiil is read", MapReads > 0, true)
+CurrentMapId = CYRODIIL_MAP_ID
+
+-- The watch's own pass must not slip a read in while the map is up either: it runs on its
+-- own timer and does not wait for the map's tick to notice the scene.
+CurrentScene = INVENTORY_SCENE
+CurrentMapId = TAMRIEL_MAP_ID
+MapReads = 0
+addon:Scan()
+check("a pass during the map reads nothing", MapReads, 0)
+CurrentScene = HUD_SCENE
+CurrentMapId = CYRODIIL_MAP_ID
+SetObjectives({})
+Slash("map off")
+
+print("\n== 39. every surface can reach the whole screen ==")
 -- The movement range used to be a fixed 900 by 500, which left most of a wide screen out of
 -- reach from any one anchor. It is the screen's own size now, in both directions.
 check("the range is the screen's width", addon.MAX_OFFSET_X, 2560)
@@ -1444,7 +1528,7 @@ check("by 1080", fallbackHeight, 1080)
 GuiRoot.GetDimensions = realDimensions
 Slash("reset")
 
-print("\n== 39. every row on the panel can be read ==")
+print("\n== 40. every row on the panel can be read ==")
 -- LibHarvensAddonSettings calls getFunction on every row when it builds and when it updates.
 -- One row that answers with nil -- or throws -- takes the whole settings panel down with it,
 -- which is exactly what a slider did on a live console: its reader's name was derived from the
@@ -1477,7 +1561,7 @@ for _, row in ipairs(PanelRows) do
 end
 check("and every slider reads back what it was set to", table.concat(roundTrips, ", "), "")
 
-print("\n== 40. the panel ==")
+print("\n== 41. the panel ==")
 -- A heading with nothing under it draws as an empty collapsible row. Every heading has to be
 -- followed by something that is not another heading, and the panel must not end on one.
 local emptySections = {}
@@ -1491,7 +1575,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.0")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.6.1")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)
@@ -1505,7 +1589,7 @@ check("and the panel agrees", PanelRow("Towns").getFunction(), false)
 PanelRow("Towns").setFunction(true)
 check("and the panel can set it back", addon:GroupEnabled("towns"), true)
 
-print("\n== 41. the two languages line up ==")
+print("\n== 42. the two languages line up ==")
 local english = CollectStringKeys(ADDON_DIR .. "/lang/strings.lua")
 local japanese = CollectStringKeys(ADDON_DIR .. "/lang/jp.lua")
 local missing, extra = {}, {}

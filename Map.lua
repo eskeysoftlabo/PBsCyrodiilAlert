@@ -223,6 +223,68 @@ function map:ShouldShow()
 	return not addon:InImperialCityCampaign()
 end
 
+-- ---------------------------------------------------------------------------------------
+-- When the map may ask the client anything about the current map
+--
+-- GetKeepPinInfo, GetObjectivePinInfo, GetKeepTravelNetworkLinkInfo and GetMapPlayerPosition
+-- all answer in terms of whatever map the world map has set. On a console, whatever the client
+-- allocates while an add-on's function is on the stack is billed to the 100MB pool every
+-- add-on shares -- and with the world map zoomed out to all of Tamriel, a single frame of that
+-- is enough to fill it (PB's MiniMap measured exactly this; it stands down for the same
+-- reason). Opening a shrine or the map and pulling back to Tamriel with the overview map up
+-- took the add-ons down.
+--
+-- So none of those four is called unless all three hold:
+--
+--   * the HUD is what is showing -- not the map, not a shrine, not a menu -- asked directly,
+--     not inferred from whether our window happens to be hidden yet;
+--   * it has been showing for a few ticks, so the client has had time to put the world map
+--     back on the player before we look at it;
+--   * the current map is Cyrodiil or a map inside it. Tamriel, or any other zone, is never
+--     read from at all.
+--
+-- When they do not hold, the map keeps what it last drew. A keep does not move, so that costs
+-- nothing; the attack bursts go on updating, because GetKeepUnderAttack does not depend on any
+-- map. The player's arrow is hidden rather than left somewhere it no longer is.
+-- ---------------------------------------------------------------------------------------
+
+local HUD_SETTLE_TICKS = 3
+map.hudSteady = 0
+map.insideCache = {}
+
+-- Whether a map lies within Cyrodiil, from its place in the shared space. Asked at most once
+-- per map id, and only from inside the gate's first two conditions.
+function map:IsInsideCyrodiil(mapId)
+	if not mapId or mapId == 0 then
+		return false
+	end
+	local cyrodiil = self:CyrodiilMapId()
+	if mapId == cyrodiil then
+		return true
+	end
+	local known = self.insideCache[mapId]
+	if known ~= nil then
+		return known
+	end
+	local x, y, width, height = Universal(mapId)
+	local cx, cy, cWidth, cHeight = Universal(cyrodiil)
+	local slack = 1e-6
+	local inside = (x and cx and x >= cx - slack and y >= cy - slack
+		and x + width <= cx + cWidth + slack and y + height <= cy + cHeight + slack) and true or false
+	self.insideCache[mapId] = inside
+	return inside
+end
+
+function map:MapReadsAllowed()
+	if not self:IsHudShowing() then
+		return false
+	end
+	if (self.hudSteady or 0) < HUD_SETTLE_TICKS then
+		return false
+	end
+	return self:IsInsideCyrodiil(GetCurrentMapId and GetCurrentMapId() or nil)
+end
+
 -- Only over the game, never over a menu. The scene is read, not touched: nothing is added to
 -- or taken from the client's scenes, so nothing here can leave one of them in a state it did
 -- not expect.
@@ -394,6 +456,11 @@ function map:RefreshKeeps()
 	if not (GetNumKeeps and GetKeepKeysByIndex and GetKeepPinInfo and GetKeepType) then
 		return
 	end
+	if not self:MapReadsAllowed() then
+		-- Nothing that depends on the current map. The bursts do not, so they stay live.
+		self:RefreshBursts()
+		return
+	end
 	local seen = {}
 	for index = 1, (GetNumKeeps() or 0) do
 		local keepId, bgContext = GetKeepKeysByIndex(index)
@@ -516,6 +583,19 @@ function map:RefreshLinks()
 	end
 end
 
+function map:RefreshBursts()
+	if not (GetKeepUnderAttack and GetNumKeeps and GetKeepKeysByIndex) then
+		return
+	end
+	for index = 1, (GetNumKeeps() or 0) do
+		local keepId, bgContext = GetKeepKeysByIndex(index)
+		local keep = keepId and addon.IsThisCampaign(bgContext) and self.keepPins[keepId]
+		if keep and not keep.icon:IsHidden() then
+			keep.burst:SetHidden(not GetKeepUnderAttack(keepId, bgContext))
+		end
+	end
+end
+
 function map:RefreshObjectives()
 	for _, pin in pairs(self.objectivePins) do
 		pin:SetHidden(true)
@@ -555,6 +635,10 @@ end
 
 function map:RefreshPlayer()
 	if not (self.player and GetMapPlayerPosition) then
+		return
+	end
+	if not self:MapReadsAllowed() then
+		self.player:SetHidden(true)
 		return
 	end
 	local x, y = GetMapPlayerPosition("player")
@@ -598,18 +682,27 @@ function map:Tick()
 	if not self.window then
 		return
 	end
-	local wasHidden = self.window:IsHidden()
 	local show = self:IsHudShowing()
 	self.window:SetHidden(not show)
-	if show then
-		if wasHidden then
-			self:RefreshKeeps()
-		end
-		self:RefreshPlayer()
+	if not show then
+		-- Away from the HUD the count starts again: coming back has to settle first.
+		self.hudSteady = 0
+		return
 	end
+	self.hudSteady = (self.hudSteady or 0) + 1
+	-- The first tick the gate opens on gets a full refresh; after that the keeps follow the
+	-- watch's own pass, and only the arrow is moved here.
+	if self.hudSteady == HUD_SETTLE_TICKS then
+		self:RefreshKeeps()
+	end
+	self:RefreshPlayer()
 end
 
-function map:Refresh()
+function map:Refresh(zoned)
+	if zoned then
+		-- A new zone is a new map under the world map; nothing is read until it has settled.
+		self.hudSteady = 0
+	end
 	if not self:ShouldShow() then
 		self:StopTick()
 		if self.window then
@@ -639,7 +732,7 @@ function map:Probe()
 	lines[#lines + 1] = string.format("universal cyrodiil=%s current=%s",
 		table.concat({ tostring(select(1, Universal(cyrodiil))), tostring(select(3, Universal(cyrodiil))) }, "/"),
 		table.concat({ tostring(select(1, Universal(current))), tostring(select(3, Universal(current))) }, "/"))
-	if GetMapPlayerPosition then
+	if GetMapPlayerPosition and self:MapReadsAllowed() then
 		local x, y = GetMapPlayerPosition("player")
 		local cx, cy = self:ToCyrodiil(x, y)
 		lines[#lines + 1] = string.format("player: current=%.3f,%.3f cyrodiil=%s,%s",
@@ -650,5 +743,13 @@ function map:Probe()
 		known = known + 1
 	end
 	lines[#lines + 1] = string.format("keeps placed: %d", known)
+	lines[#lines + 1] = string.format("map reads allowed: %s (hud steady %d, current inside Cyrodiil %s)",
+		tostring(self:MapReadsAllowed()), self.hudSteady or 0,
+		tostring(self:IsInsideCyrodiil(current)))
+	-- The console's shared add-on memory pool: the number that ran out.
+	if GetTotalUserAddOnMemoryPoolUsageMB and GetTotalUserAddOnMemoryPoolCapacityMB then
+		lines[#lines + 1] = string.format("add-on memory pool: %.1f / %.1f MB",
+			GetTotalUserAddOnMemoryPoolUsageMB() or 0, GetTotalUserAddOnMemoryPoolCapacityMB() or 0)
+	end
 	return lines
 end

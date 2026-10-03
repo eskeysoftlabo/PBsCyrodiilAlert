@@ -2557,6 +2557,7 @@ local function OnPlayerActivated()
 	-- not also the first time anything is created.
 	addon.hud:Refresh()
 	addon.log:Refresh()
+	addon.map:Refresh(true)
 
 	if addon.sv.banner then
 		addon:PrintStatus()
