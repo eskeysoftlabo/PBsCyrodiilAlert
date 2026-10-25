@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.7.1")
+check("version read from manifest", addon.version, "2.7.2")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.7.1"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.7.2"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -846,12 +846,14 @@ Advance(10)
 check("nothing about it while it has not spawned", BoardSaid("Volendrung"), false)
 
 -- Revealed and carried by an alliance. There is no name to be had -- the client is never told
--- who has it -- so the line says the alliance and stops there.
+-- who has it -- so the line says the alliance and stops there. The alliance comes from the
+-- state-changed event itself, not from the map.
 SetObjectives({
 	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
 	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD,
 	  pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_ALDMERI },
 })
+EmitArtifactState(OBJECTIVE_CONTROL_STATE_UNKNOWN, OBJECTIVE_CONTROL_STATE_FLAG_HELD, nil, AD)
 Advance(10)
 check("named on the summary", BoardSaid("Volendrung: Aldmeri Dominion"), true)
 check("in that alliance's colour", BoardColour("Volendrung"), "FFD700")
@@ -861,6 +863,7 @@ SetObjectives({
 	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_AT_BASE,
 	  pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_NEUTRAL },
 })
+EmitArtifactState(OBJECTIVE_CONTROL_STATE_FLAG_HELD, OBJECTIVE_CONTROL_STATE_FLAG_AT_BASE, nil, ALLIANCE_NONE)
 Advance(10)
 check("nobody holding it says so", BoardSaid("Volendrung: unclaimed"), true)
 
@@ -906,7 +909,7 @@ Advance(600)
 check("and says any moment once the window has passed", BoardSaid("revealed in about any moment"), true)
 
 -- Revealed: the objective now exists, and the clock restarts on the reveal.
-EmitArtifactState(UNKNOWN, HELD)
+EmitArtifactState(UNKNOWN, HELD, nil, AD)
 SetObjectives({
 	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
 	  name = "Volendrung", state = HELD, pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_ALDMERI },
@@ -935,14 +938,18 @@ check("returned to Oblivion", BoardSaid("Volendrung: returned to Oblivion (0:10 
 Advance(3600)
 check("hours when there are hours", BoardSaid("(1:00:10 ago)"), true)
 
--- The clock only knows what it saw. Out already when we arrived: time unknown, not a guess.
+-- The clock only knows what it saw. Out already when we arrived: time unknown, not a guess --
+-- and with no event yet and the overview map off, the holder is not known either, rather than
+-- asked of a map that might be showing all of Tamriel.
 addon.artifactClock = nil
+addon.artifactHolders = {}
 SetObjectives({
 	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
 	  name = "Volendrung", state = HELD, pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_DAGGERFALL },
 })
 Advance(10)
-check("an artifact that was out before we came is untimed", BoardSaid("Volendrung: Daggerfall Covenant (time unknown)"), true)
+check("an artifact that was out before we came is untimed", BoardSaid("Volendrung: holder not known yet (time unknown)"), true)
+addon.artifactHolders = {}
 
 -- Another campaign's announcement does not start this campaign's clock.
 addon.artifactClock = nil
@@ -1517,15 +1524,18 @@ check("on Cyrodiil it reads", MapReads > 0, true)
 -- A shrine, or the map, opened and pulled back to Tamriel.
 CurrentScene = INVENTORY_SCENE
 CurrentMapId = TAMRIEL_MAP_ID
-MapReads = 0
+MapReads, StaticMapLookups = 0, 0
 Advance(30)
 check("with the world map up: not one read in thirty seconds", MapReads, 0)
+check("and not even a lookup by map id", StaticMapLookups, 0)
 
 -- The world map closed, but still on Tamriel: the HUD is up and settled, and still nothing.
 CurrentScene = HUD_SCENE
-MapReads = 0
+MapReads, StaticMapLookups = 0, 0
 Advance(30)
 check("the HUD back but the map still on Tamriel: not one read", MapReads, 0)
+-- Deciding that Tamriel is not inside Cyrodiil takes one look at where each sits, once, cached.
+check("one look at where Tamriel and Cyrodiil sit, and no more", StaticMapLookups, 2)
 check("the arrow hidden rather than guessed", addon.map.player.hidden, true)
 check("the keeps stay where they were", keep.icon.hidden, false)
 -- The bursts depend on no map, so they stay live.
@@ -1538,9 +1548,14 @@ check("and clears", keep.burst.hidden, true)
 
 -- Another zone's map is no better.
 CurrentMapId = OTHER_ZONE_MAP_ID
-MapReads = 0
+MapReads, StaticMapLookups = 0, 0
 Advance(10)
 check("another zone's map: not one read", MapReads, 0)
+check("and one look at where it sits, once", StaticMapLookups <= 2, true)
+Advance(10)
+local looked = StaticMapLookups
+Advance(10)
+check("never again for the same map", StaticMapLookups, looked)
 
 -- Back on Cyrodiil: reads resume, but only after the HUD has settled.
 CurrentMapId = CYRODIIL_MAP_ID
@@ -1560,6 +1575,71 @@ MapReads = 0
 Advance(2)
 check("a map inside Cyrodiil is read", MapReads > 0, true)
 CurrentMapId = CYRODIIL_MAP_ID
+
+-- The summary's Volendrung line, the case 2.6.1 missed: it lived in Main.lua, not the map, and
+-- asked GetObjectivePinInfo for the holder on every five-second pass -- with no regard for the
+-- world map. With the artifact out and the standard map on Tamriel, that is a Tamriel read from
+-- an add-on frame. The holder comes from the event now, and nothing at all is read.
+Slash("map off")
+Slash("board on")
+addon.artifactHolders = {}
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD, pinType = 202 },
+})
+CurrentScene = INVENTORY_SCENE
+CurrentMapId = TAMRIEL_MAP_ID
+MapReads = 0
+EmitArtifactState(OBJECTIVE_CONTROL_STATE_UNKNOWN, OBJECTIVE_CONTROL_STATE_FLAG_HELD, nil, EP)
+Advance(30)
+Fire(EVENT_CAMPAIGN_SELECTION_DATA_CHANGED)
+Slash("board")
+check("the summary with Volendrung out reads nothing on Tamriel", MapReads, 0)
+check("and still names the holder, from the event", BoardSaid("Volendrung: Ebonheart Pact"), true)
+-- Back on Cyrodiil with the overview map up and settled, the pin is safe to read again, and an
+-- artifact that was out before any event arrived gets its holder from it.
+CurrentScene = HUD_SCENE
+CurrentMapId = CYRODIIL_MAP_ID
+addon.artifactHolders = {}
+SetObjectives({
+	{ keepId = 900, objectiveId = 1, bg = BGQUERY_LOCAL, objectiveType = OBJECTIVE_DAEDRIC_WEAPON,
+	  name = "Volendrung", state = OBJECTIVE_CONTROL_STATE_FLAG_HELD,
+	  pinType = MAP_PIN_TYPE_AVA_DAEDRIC_ARTIFACT_VOLENDRUNG_DAGGERFALL },
+})
+Slash("map on")
+Advance(6)
+check("with the map's gate open, the pin supplies the holder", BoardSaid("Volendrung: Daggerfall Covenant"), true)
+Slash("board off")
+
+-- Everything on at once -- map, summary, screen alerts, enemy fights, a group, Volendrung out --
+-- for a full minute on Tamriel, with every kind of event arriving in the middle of it. This is
+-- the audit that found the summary's read; kept, so the next one is found the same way.
+Slash("board on")
+Slash("hud on")
+Slash("offense on")
+SetGroup({ { tag = "group1", me = true }, { tag = "group2", place = { 0.6, 0.3 }, leader = true } })
+SetKeep(CHALMAN, { attacked = true })
+CurrentScene = INVENTORY_SCENE
+CurrentMapId = TAMRIEL_MAP_ID
+MapReads, StaticMapLookups = 0, 0
+for second = 1, 60 do
+	Advance(1)
+	if second == 10 then EmitArtifactSpawned() end
+	if second == 20 then EmitArtifactState(OBJECTIVE_CONTROL_STATE_UNKNOWN, OBJECTIVE_CONTROL_STATE_FLAG_HELD, nil, AD) end
+	if second == 30 then Fire(EVENT_CAMPAIGN_SELECTION_DATA_CHANGED) end
+	if second == 40 then EmitScroll(OBJECTIVE_CONTROL_EVENT_FLAG_TAKEN, "Ghartok", CHALMAN, "Someone", AD) end
+	if second == 50 then EmitArtifactState(OBJECTIVE_CONTROL_STATE_FLAG_HELD, OBJECTIVE_CONTROL_STATE_FLAG_AT_BASE, nil, ALLIANCE_NONE) end
+end
+check("a minute on Tamriel with everything on: not one map read", MapReads, 0)
+check("and not one lookup by map id", StaticMapLookups, 0)
+CurrentScene = HUD_SCENE
+CurrentMapId = CYRODIIL_MAP_ID
+SetKeep(CHALMAN, { attacked = false })
+SetGroup({})
+Slash("board off")
+Slash("hud off")
+Slash("offense off")
+Advance(4)
 
 -- The watch's own pass must not slip a read in while the map is up either: it runs on its
 -- own timer and does not wait for the map's tick to notice the scene.
@@ -1663,7 +1743,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.7.1")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.7.2")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

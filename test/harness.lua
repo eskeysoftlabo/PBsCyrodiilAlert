@@ -123,9 +123,11 @@ function GetUnitPower(unitTag, mechanic)
 	return 0, 0
 end
 function EmitArtifactSpawned() Fire(EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_SPAWNED_BUT_NOT_REVEALED, 1) end
-function EmitArtifactState(lastState, state, bg)
+-- The client's own report of a state change, with the holder's alliance in it -- which is
+-- where the summary learns who has the artifact.
+function EmitArtifactState(lastState, state, bg, holder)
 	Fire(EVENT_DAEDRIC_ARTIFACT_OBJECTIVE_STATE_CHANGED, 900, 1, bg or BGQUERY_LOCAL, 0, state,
-		ALLIANCE_NONE, ALLIANCE_NONE, 0, 1, lastState)
+		holder or ALLIANCE_NONE, ALLIANCE_NONE, 0, 1, lastState)
 end
 -- What the client sends when a scroll changes hands.
 function EmitScroll(controlEvent, artifactName, keepId, characterName, alliance, displayName)
@@ -556,12 +558,25 @@ function GetPlayerCameraHeading() return 1.25 end
 
 -- Every call that answers in terms of the current map, counted. With the world map on Tamriel
 -- these are what the console bills to the shared add-on pool; the add-on must make none.
-MapReads = 0
+-- Two kinds, counted apart. MapReads: everything that answers in terms of the CURRENT map --
+-- none of it may run with the world map on Tamriel. StaticMapLookups: lookups by an explicit map
+-- id (where a map sits in the shared space, its tiles). Those are not about the current map, but
+-- they are still map data, so they are held to once per map id and never while a full-screen map
+-- is up.
+MapReads, StaticMapLookups = 0, 0
 function CountMapReads()
-	for _, name in ipairs({ "GetKeepPinInfo", "GetMapPlayerPosition", "GetObjectivePinInfo", "GetKeepTravelNetworkLinkInfo" }) do
+	for _, name in ipairs({ "GetKeepPinInfo", "GetMapPlayerPosition", "GetObjectivePinInfo",
+		"GetKeepTravelNetworkLinkInfo" }) do
 		local real = _G[name]
 		_G[name] = function(...)
 			MapReads = MapReads + 1
+			return real(...)
+		end
+	end
+	for _, name in ipairs({ "GetUniversallyNormalizedMapInfo", "GetMapNumTilesForMapId", "GetMapTileTextureForMapId" }) do
+		local real = _G[name]
+		_G[name] = function(...)
+			StaticMapLookups = StaticMapLookups + 1
 			return real(...)
 		end
 	end
@@ -598,7 +613,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.7.1" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.7.2" end,
 	}
 end
 
