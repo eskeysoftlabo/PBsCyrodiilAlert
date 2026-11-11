@@ -71,7 +71,7 @@ end
 print("\n== 1. load ==")
 Fire(EVENT_ADD_ON_LOADED, "PBsCyrodiilAlert")
 addon = PBS_CYRODIIL_ALERT
-check("version read from manifest", addon.version, "2.8.0")
+check("version read from manifest", addon.version, "2.8.1")
 check("slash command registered", type(SLASH_COMMANDS["/pbalert"]), "function")
 check("short slash registered", type(SLASH_COMMANDS["/pbca"]), "function")
 check("no timer before the world exists", TimerRunning(), false)
@@ -83,7 +83,7 @@ Fire(EVENT_PLAYER_ACTIVATED)
 check("timer running", TimerRunning(), true)
 check("timer period is the default 5 s", TimerInterval(), 5)
 check("no login banner by default", Lines(), 0)
-check("panel rows built", #PanelRows, 96)
+check("panel rows built", #PanelRows, 97)
 check("interval slider is on the panel", PanelRow("Check every").max, 60)
 check("quiet world says nothing", (Advance(20) or Lines()), 0)
 
@@ -235,7 +235,7 @@ check("a resource is not listed while it is switched off", Said("Chalman Mine"),
 print("\n== 14. status ==")
 ClearOutput()
 Slash("")
-check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.8.0"), true)
+check("says the build", Said("PB\u{2019}s CyrodiilAlert 2.8.1"), true)
 check("says the period", Said("watching every 5 s"), true)
 check("says what it watches", Said("Keeps and outposts, Towns"), true)
 check("says your alliance", Said("your alliance: Ebonheart Pact"), true)
@@ -579,9 +579,23 @@ check("and goes back to zero when the fighting stops",
 	BoardSaid("Aldmeri Dominion  keeps 5  score 9,000  under attack 0"), true)
 check("on every line, always", BoardSaid("Daggerfall Covenant  keeps 2  score 3,000  under attack 0"), true)
 
-SetCampaign({ emperor = { alliance = AD, name = "Someone" } })
+-- By account name (the PSN ID on a console) unless asked otherwise.
+SetCampaign({ emperor = { alliance = AD, name = "Sir Someone", account = "@someone_psn" } })
 Advance(10)
-check("an emperor is named", BoardSaid("Emperor: Someone (Aldmeri Dominion)"), true)
+check("the emperor by account name by default", BoardSaid("Emperor: someone_psn (Aldmeri Dominion)"), true)
+check("not by character name", BoardSaid("Sir Someone"), false)
+Slash("board emperor character")
+check("or by character name when asked", BoardSaid("Emperor: Sir Someone (Aldmeri Dominion)"), true)
+check("the panel agrees", PanelRow("Emperor shown by").getFunction(), "Character name")
+PanelRow("Emperor shown by").setFunction(nil, nil, { data = "account" })
+check("and the panel sets it back", BoardSaid("Emperor: someone_psn"), true)
+ClearOutput()
+Slash("board emperor sideways")
+check("a choice that is not one is refused", Said("say account or character"), true)
+-- An empty account name falls back to the character name rather than an empty line.
+SetCampaign({ emperor = { alliance = AD, name = "Sir Someone", account = "" } })
+Advance(10)
+check("no account name: the character name", BoardSaid("Emperor: Sir Someone"), true)
 SetCampaign({ emperor = nil })
 
 print("\n== 25. the summary when the campaign is not there ==")
@@ -815,7 +829,8 @@ local realMode = IsInGamepadPreferredMode
 IsInGamepadPreferredMode = function() return true end
 ClearOutput()
 EmitScroll(OBJECTIVE_CONTROL_EVENT_FLAG_TAKEN, "Ghartok", CHALMAN, "Someone", AD, "@Somebody")
-check("gamepad mode uses the display name", Said("@Somebody"), true)
+-- Formatted the client's way for display, which on console drops the "@".
+check("gamepad mode uses the display name", Said("Somebody (Aldmeri"), true)
 IsInGamepadPreferredMode = realMode
 
 ClearOutput()
@@ -1743,7 +1758,7 @@ for index, row in ipairs(PanelRows) do
 end
 -- The name the settings library is given. It carries the typographic apostrophe: with an
 -- ASCII one the library ate the whole "PB's " and the panel was called "CyrodiilAlert".
-check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.8.0")
+check("the panel is named after the add-on", PanelTitle, "PB\u{2019}s CyrodiilAlert 2.8.1")
 -- Byte positions, not characters: the apostrophe is three bytes, which is exactly the sort of
 -- thing that makes a string comparison look right and be wrong.
 check("with the prefix intact", PanelTitle:find("PB\u{2019}s ", 1, true), 1)

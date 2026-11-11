@@ -288,8 +288,10 @@ function GetTotalCampaignHoldings(id, holdingType, alliance)
 end
 function GetCampaignEmperorInfo(id)
 	if id ~= campaign.id or not campaign.emperor then return ALLIANCE_NONE, "", "" end
-	return campaign.emperor.alliance, campaign.emperor.name, "@" .. campaign.emperor.name
+	return campaign.emperor.alliance, campaign.emperor.name, campaign.emperor.account or ("@" .. campaign.emperor.name)
 end
+-- The client's own formatting of an account name for display: without the "@", as on console.
+function ZO_FormatUserFacingDisplayName(name) return (tostring(name):gsub("^@", "")) end
 -- ---- campaign selection data (the population estimate) -------------------------------
 -- The four buckets the campaign screen shows, and their client strings.
 -- Deliberately NOT 0-based, and deliberately not matching the SI_CAMPAIGNPOPULATIONTYPE<n>
@@ -613,7 +615,7 @@ SCENE_MANAGER = { GetCurrentScene = function() return CurrentScene end }
 function GetAddOnManager()
 	return {
 		GetNumAddOns = function() return 1 end,
-		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.8.0" end,
+		GetAddOnInfo = function(_, i) return "PBsCyrodiilAlert", "|cFF69B4PB's CyrodiilAlert|r 2.8.1" end,
 	}
 end
 
